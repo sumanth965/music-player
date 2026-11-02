@@ -149,7 +149,7 @@ export default function SongTextData({ player }) {
       <div className="song-text-data-header">
         <div className="song-text-data-badge">
           <FileText size={14} />
-          <span>Song Text Data & Audio Transcription</span>
+          <span>Swar Song Text & Audio Transcription</span>
         </div>
         <div className="header-actions">
           <button
@@ -214,7 +214,7 @@ export default function SongTextData({ player }) {
         <div className="transcription-card-header">
           <div className="transcription-card-title">
             <Mic size={16} className="mic-accent" />
-            <h4>AI Audio-to-Text Transcription</h4>
+            <h4>Swar AI Audio-to-Text Transcription</h4>
           </div>
           {transcriptText && (
             <div className="transcription-card-actions">
@@ -246,7 +246,7 @@ export default function SongTextData({ player }) {
             </div>
             <div className="transcribing-text">
               <h5>Listening to audio waveform…</h5>
-              <p>{transcriptionStatus || "Generating word-timed lyrics with AI Whisper"}</p>
+              <p>{transcriptionStatus || "Generating word-timed lyrics with Swar AI Whisper"}</p>
             </div>
           </div>
         ) : transcriptText ? (
@@ -290,12 +290,51 @@ export default function SongTextData({ player }) {
         ) : (
           <div className="transcription-empty-box">
             <p>
-              No text fetched from this song yet. Run AI Whisper to listen directly to the audio
+              No text fetched from this song yet. Run Swar AI Whisper to listen directly to the audio
               track and transcribe sung words into synchronized lyrics.
             </p>
             {transcribeError && (
               <div className="transcription-error-badge">
                 <span>⚠️ {transcribeError}</span>
+              </div>
+            )}
+            {(!customKey || transcribeError) && (
+              <div className="inline-key-setup">
+                <div className="inline-key-header">
+                  <span className="inline-key-title">Groq Cloud Whisper API Key</span>
+                  <a
+                    href="https://console.groq.com/keys"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="get-free-key-link"
+                  >
+                    Get free Groq key ↗
+                  </a>
+                </div>
+                <div className="inline-key-input-row">
+                  <input
+                    type="password"
+                    placeholder="Paste Groq API Key (gsk_...)"
+                    value={customKey}
+                    onChange={(e) => {
+                      setCustomKey(e.target.value);
+                      setTranscribeError("");
+                    }}
+                    className="inline-key-input"
+                  />
+                  <button
+                    type="button"
+                    className="inline-key-save-btn"
+                    onClick={() => {
+                      handleSaveApiKey();
+                      if (customKey && customKey.trim()) {
+                        handleTranscribeClick();
+                      }
+                    }}
+                  >
+                    Save & Transcribe
+                  </button>
+                </div>
               </div>
             )}
             <button
@@ -304,7 +343,7 @@ export default function SongTextData({ player }) {
               disabled={isTranscribing}
             >
               <Sparkles size={16} />
-              <span>Transcribe Song Audio to Text</span>
+              <span>Transcribe with Swar AI</span>
             </button>
           </div>
         )}
