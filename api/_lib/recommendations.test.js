@@ -1,0 +1,239 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { fetchRecommendations, selectRecommendations, preferAvailableLyrics } from './recommendations.js';
+import handler from '../recommendations.js';
+
+const current = { artist: 'The Weeknd', title: 'Blinding Lights' };
+const json = value => new Response(JSON.stringify(value), { headers: { 'Content-Type': 'application/json' } });
+const track = (id, title, artist = current.artist) => ({ id, title, artist, duration: 200 });
+
+test('known lyrics take priority while metadata failure retains candidates', async () => {
+  const selected = await preferAvailableLyrics([track('a', 'Unknown timing'), track('b', 'Known timing')], { fetcher: async url => {
+    if (url.searchParams.get('track_name') === 'Known timing') return json({ syncedLyrics: '[00:01] Real line' });
+    throw new Error('Provider offline');
+  } });
+  assert.equal(selected[0].id, 'b');
+  assert.equal(selected[0].lyricsAvailable, true);
+  assert.equal(selected.length, 2);
+});
+
+test('recommendations exclude current song and duplicate album versions across catalogues', () => {
+  const selected = selectRecommendations([track('1', 'Blinding Lights (Deluxe)'), track('2', 'Save Your Tears'), track('3', 'Save Your Tears - Remastered'), track('4', 'Save Your Tears', 'Other Artist'), track('5', 'Empty', '')], current);
+  // A same-named song by another artist (a cover or re-credit) is the same song to the listener.
+  assert.deepEqual(selected.map(item => item.id), ['2']);
+  assert.ok(selected.every(item => item.recommended));
+});
+
+test('related artists are interleaved ahead of same-artist songs when no language is known', async () => {
+  const requests = [];
+  const result = await fetchRecommendations(current, { fetcher: async url => {
+    requests.push(url);
+    if (url.hostname === 'lrclib.net') throw new Error('Lyrics offline');
+    if (url.pathname === '/search/artist') return json({ data: [{ id: 1, name: current.artist }] });
+    if (url.pathname === '/search' || url.pathname.endsWith('/radio')) return json({ data: [] });
+    if (url.pathname.endsWith('/related')) return json({ data: [{ id: 2, name: 'Related A' }, { id: 3, name: 'Related B' }] });
+    const id = Number(url.pathname.split('/')[2]);
+    return json({ data: [0, 1, 2].map(index => ({ id: id * 10 + index, title: `Song ${id}-${index}`, artist: { name: `Artist ${id}`, id }, duration: 180, album: { cover_big: 'https://example.com/cover.jpg' } })) });
+  } });
+  assert.deepEqual(result.slice(0, 4).map(item => item.artist), ['Artist 2', 'Artist 3', 'Artist 2', 'Artist 3']);
+  assert.equal(result.length, 6, 'at most two songs per artist');
+  assert.ok(requests.every(url => ['api.deezer.com', 'lrclib.net'].includes(url.hostname)));
+});
+
+const deezerTrack = (id, title, artist, albumId = id) => ({ id, title, duration: 200, artist: { id: artist.length, name: artist }, album: { id: albumId, title: 'Album', cover_big: 'https://example.com/c.jpg' } });
+const lyricsFor = { en: 'I feel it in my heart and you know that I will never let you go baby when the night is over we are gone', es: 'Yo no sé qué me pasa contigo pero cuando te veo me muero por ti y no quiero que te vayas de mi lado', el: 'Σ αγαπώ και σε θέλω πολύ μέσα στη νύχτα' };
+function catalogue({ radio = [], related = [], top = [], lyrics = {}, genres = {}, seedLyrics = null }) {
+  return async url => {
+    if (url.hostname === 'lrclib.net') {
+      const title = url.searchParams.get('track_name');
+      if (url.pathname === '/api/search') return json(seedLyrics ? [{ plainLyrics: seedLyrics }] : []);
+      if (!lyrics[title]) return new Response('{}', { status: 404 });
+      return json({ plainLyrics: lyrics[title] });
+    }
+    if (url.pathname === '/search/artist') return json({ data: [{ id: 99, name: url.searchParams.get('q') }] });
+    if (url.pathname === '/search') return json({ data: [{ ...deezerTrack(500, url.searchParams.get('q').match(/track:"([^"]+)"/)[1], url.searchParams.get('q').match(/artist:"([^"]+)"/)[1], 500) }] });
+    if (url.pathname.endsWith('/radio')) return json({ data: radio });
+    if (url.pathname.endsWith('/related')) return json({ data: related.length ? [{ id: 7, name: 'Rel' }] : [] });
+    if (url.pathname === '/artist/7/top') return json({ data: related });
+    if (url.pathname.endsWith('/top')) return json({ data: top });
+    if (url.pathname.startsWith('/album/')) return json({ genres: { data: (genres[url.pathname.split('/')[2]] || []).map(name => ({ id: 1, name })) } });
+    throw new Error(`unexpected ${url}`);
+  };
+}
+
+test('a Greek seed only queues Greek or unconfirmed songs, confirmed Greek first', async () => {
+  const seed = { artist: 'Ελένη Φουρέιρα', title: 'Φωτιά μου' };
+  const result = await fetchRecommendations(seed, { fetcher: catalogue({
+    radio: [deezerTrack(1, 'Summer Love', 'Some DJ'), deezerTrack(2, 'Μια νύχτα', 'Κωνσταντίνος'), deezerTrack(3, 'Unknown Mood', 'Mystery'), deezerTrack(4, 'Despacito Otra', 'Latino')],
+    lyrics: { 'Summer Love': lyricsFor.en, 'Despacito Otra': lyricsFor.es },
+  }) });
+  assert.deepEqual(result.map(item => item.title), ['Μια νύχτα', 'Unknown Mood']);
+});
+
+test('seed language comes from its own lyrics when the title is ambiguous', async () => {
+  const seed = { artist: 'Latin Seed', title: 'Corazón Roto' };
+  const result = await fetchRecommendations(seed, { fetcher: catalogue({
+    seedLyrics: lyricsFor.es,
+    radio: [deezerTrack(11, 'English Song', 'Anglo'), deezerTrack(12, 'Canción Nueva', 'Hispano')],
+    lyrics: { 'English Song': lyricsFor.en, 'Canción Nueva': lyricsFor.es },
+  }) });
+  assert.deepEqual(result.map(item => item.title), ['Canción Nueva']);
+  assert.equal(result[0].lyricsAvailable, true);
+});
+
+test('client language wins and incompatible album genres are dropped', async () => {
+  const seed = { artist: 'Pop Seed', title: 'Glow' };
+  const result = await fetchRecommendations(seed, { lang: 'en', genre: 'Pop', fetcher: catalogue({
+    radio: [deezerTrack(21, 'Heavy', 'Metalhead', 21), deezerTrack(22, 'Club', 'Dancer', 22), deezerTrack(23, 'Ballad', 'Singer', 23)],
+    lyrics: { Heavy: lyricsFor.en, Club: lyricsFor.en, Ballad: lyricsFor.en },
+    genres: { 21: ['Metal'], 22: ['Dance'], 23: ['Pop'], 500: ['Pop'] },
+  }) });
+  assert.deepEqual(result.map(item => item.title), ['Ballad', 'Club']);
+});
+
+test('failed related source falls back only to exact same artist, never unrelated search hits', async () => {
+  const result = await fetchRecommendations(current, { fetcher: async url => {
+    if (url.hostname === 'api.deezer.com') throw new Error('Offline');
+    return json({ results: [
+      { trackId: 1, trackName: 'Starboy', artistName: current.artist, trackTimeMillis: 210000 },
+      { trackId: 2, trackName: 'Cover', artistName: 'The Weeknd Tribute', trackTimeMillis: 210000 },
+      { trackId: 3, trackName: current.title, artistName: current.artist, trackTimeMillis: 210000 },
+    ] });
+  } });
+  assert.equal(result.length, 1);
+  assert.equal(result[0].title, 'Starboy');
+  assert.equal(result[0].recommendationReason, 'More from The Weeknd');
+});
+
+test('aborted requests propagate without trying fallback', async () => {
+  const controller = new AbortController();
+  controller.abort();
+  let calls = 0;
+  await assert.rejects(fetchRecommendations(current, { signal: controller.signal, fetcher: async (_, { signal }) => { calls++; signal.throwIfAborted(); } }), { name: 'AbortError' });
+  assert.ok(calls <= 2, 'only the initial parallel lookups run');
+});
+
+test('endpoint rejects arrays, control characters, excessive input and non-GET methods', async () => {
+  for (const request of [
+    { method: 'POST', query: current, expected: 405 },
+    { method: 'GET', query: { ...current, artist: ['a', 'b'] }, expected: 400 },
+    { method: 'GET', query: { ...current, title: 'a'.repeat(201) }, expected: 400 },
+    { method: 'GET', query: { ...current, artist: 'artist\n' }, expected: 400 },
+    { method: 'GET', query: { ...current, lang: 'english!' }, expected: 400 },
+    { method: 'GET', query: { ...current, genre: ['Pop'] }, expected: 400 },
+    { method: 'GET', query: { ...current, duration: '-3' }, expected: 400 },
+  ]) {
+    const res = { code: 200, setHeader() {}, status(code) { this.code = code; return this; }, json(value) { return value; } };
+    const result = await handler(request, res);
+    assert.equal(res.code, request.expected);
+    assert.ok(result.error);
+  }
+});
+
+test('oversized catalogue responses fail instead of consuming unbounded memory', async () => {
+  await assert.rejects(fetchRecommendations(current, { fetcher: async () => new Response(' '.repeat(500001)) }), /too large/);
+});
+
+// ── Songs credited to several artists ("A & B", "A x B", "A feat. B", "A, B") ──
+test('artist credits split into individual artists, the full credit first', async () => {
+  const { artistCredits } = await import('./recommendations.js');
+  assert.deepEqual(artistCredits('Kali Mija & Da Africa Deep'), ['Kali Mija & Da Africa Deep', 'Kali Mija', 'Da Africa Deep']);
+  assert.deepEqual(artistCredits('Calvin Harris feat. Dua Lipa'), ['Calvin Harris feat. Dua Lipa', 'Calvin Harris', 'Dua Lipa']);
+  assert.deepEqual(artistCredits('Rema, Selena Gomez'), ['Rema, Selena Gomez', 'Rema', 'Selena Gomez']);
+  assert.deepEqual(artistCredits('Travis Scott x Drake'), ['Travis Scott x Drake', 'Travis Scott', 'Drake']);
+  assert.deepEqual(artistCredits('Simon & Garfunkel'), ['Simon & Garfunkel', 'Simon', 'Garfunkel']);
+  assert.deepEqual(artistCredits('Adele'), ['Adele']);
+});
+
+const radioOf = artistId => ({ data: [1, 2, 3, 4, 5, 6].map(i => ({ id: artistId * 100 + i, title: `Radio ${i}`, duration: 200, artist: { id: 1000 + i, name: `Radio artist ${i}` }, album: { id: 1, title: 'LP', cover_big: 'https://example.com/c.jpg' } })) });
+const collab = { artist: 'Kali Mija & Da Africa Deep', title: 'Personal' };
+
+test('a song by "A & B" still gets a radio queue from one of its artists', async () => {
+  const result = await fetchRecommendations(collab, { fetcher: async url => {
+    if (url.hostname === 'lrclib.net') return new Response('{}', { status: 404 });
+    if (url.pathname === '/search/artist') return json({ data: url.searchParams.get('q') === 'Kali Mija' ? [{ id: 5, name: 'Kali Mija' }] : [] });
+    if (url.pathname === '/search') return json({ data: [] });
+    if (url.pathname === '/artist/5/radio') return json(radioOf(5));
+    if (url.pathname.startsWith('/artist/5/')) return json({ data: [] });
+    return json({ data: [] });
+  } });
+  assert.ok(result.length >= 4, `only ${result.length}`);
+});
+
+test('when no credited name matches an artist, the song itself leads to its artist', async () => {
+  const result = await fetchRecommendations(collab, { fetcher: async url => {
+    if (url.hostname === 'lrclib.net') return new Response('{}', { status: 404 });
+    if (url.pathname === '/search/artist') return json({ data: [{ id: 77, name: 'Someone else' }] });
+    if (url.pathname === '/search') return json({ data: [{ id: 42, title: 'Personal', duration: 292, artist: { id: 8, name: 'Kali Mija' }, album: { id: 9, title: 'Personal' } }] });
+    if (url.pathname === '/artist/8/radio') return json(radioOf(8));
+    if (url.pathname.startsWith('/artist/8/')) return json({ data: [] });
+    return json({ data: [] });
+  } });
+  assert.ok(result.length >= 4, `only ${result.length}`);
+});
+
+test('the iTunes fallback accepts songs by any credited artist', async () => {
+  const result = await fetchRecommendations(collab, { fetcher: async url => {
+    if (url.hostname === 'lrclib.net') return new Response('{}', { status: 404 });
+    if (url.hostname === 'itunes.apple.com') return json({ results: [1, 2, 3, 4, 5].map(i => ({ trackId: i, trackName: `Song ${i}`, artistName: i % 2 ? 'Kali Mija' : 'Da Africa Deep', collectionName: 'LP', artworkUrl100: 'https://example.com/100x100bb.jpg', trackTimeMillis: 200000 })) });
+    return json({ data: [] });
+  } });
+  assert.ok(result.length >= 4, `only ${result.length}`);
+});
+
+test('with no lyrics to read, the artist\'s own titles set the language and keep the radio in it', async () => {
+  const english = ['Turned To Stone', 'Feel The Love Tonight', 'Say You Will Come Back', 'Where Are You Now', 'In My Head All Night', 'Lost In The Music'];
+  const radio = [
+    { id: 11, title: 'Por Que Não Tentar de Novo', artist: 'Udora' },
+    ...english.map((title, i) => ({ id: 20 + i, title: `${title} (Club Mix)`, artist: `House ${i}` })),
+  ].map(item => ({ id: item.id, title: item.title, duration: 250, artist: { id: 500 + item.id, name: item.artist }, album: { id: 1, title: 'LP', cover_big: 'https://example.com/c.jpg' } }));
+  const result = await fetchRecommendations({ artist: 'Kali Mija', title: 'Personal' }, { fetcher: async url => {
+    if (url.hostname === 'lrclib.net') return new Response('{}', { status: 404 });
+    if (url.pathname === '/search/artist') return json({ data: [{ id: 5, name: 'Kali Mija' }] });
+    if (url.pathname === '/artist/5/top') return json({ data: english.map((title, i) => ({ id: 900 + i, title, duration: 250, artist: { id: 5, name: 'Kali Mija' }, album: { id: 2, title: 'EP' } })) });
+    if (url.pathname === '/artist/5/radio') return json({ data: radio });
+    return json({ data: [] });
+  } });
+  assert.ok(result.length >= 4, `only ${result.length}`);
+  assert.ok(!result.some(track => track.title.startsWith('Por Que')), result.map(track => track.title).join(' | '));
+});
+
+test('recommendations never repeat a song under another artist spelling or version', async () => {
+  const { selectRecommendations } = await import('./recommendations.js');
+  const make = (id, title, artist) => ({ id, title, artist, duration: 200 });
+  const picked = selectRecommendations([
+    make('1', 'Healing (Sousa AfroHouse Remix)', 'GORDO x Drake'),
+    make('2', 'Healing [Ultra Records]', 'Gordo & Drake'),
+    make('3', 'Passionfruit', 'Drake'),
+    make('4', 'HEALING (YUMA REMIX)', 'GORDO & DRAKE'),
+    make('5', 'Hypnotized', 'Gordo'),
+  ], { title: 'Healing', artist: 'GORDO x Drake' });
+  assert.deepEqual(picked.map(track => track.id), ['3', '5'], 'the playing song is never recommended back in any version');
+});
+
+test('vibe: a song from the same era and popularity tier ranks above a distant one', async () => {
+  const { vibeScore } = await import('./recommendations.js');
+  const seed = { lang: 'en', year: 2021, rank: 800000 };
+  const base = { source: 'radio', language: 'en', genreMatch: 'exact', lyricsAvailable: true };
+  const close = vibeScore({ ...base, year: 2020, rank: 700000 }, seed);
+  const otherEra = vibeScore({ ...base, year: 1986, rank: 700000 }, seed);
+  const obscure = vibeScore({ ...base, year: 2020, rank: 9000 }, seed);
+  assert.ok(close > otherEra, `${close} vs ${otherEra}`);
+  assert.ok(close > obscure, `${close} vs ${obscure}`);
+});
+
+test('vibe: a confirmed language match is the largest single signal', async () => {
+  const { vibeScore } = await import('./recommendations.js');
+  const seed = { lang: 'el', year: 2021, rank: 500000 };
+  const plain = { source: 'related' };
+  const language = vibeScore({ ...plain, language: 'el' }, seed) - vibeScore(plain, seed);
+  const era = vibeScore({ ...plain, year: 2021 }, seed) - vibeScore(plain, seed);
+  const tier = vibeScore({ ...plain, rank: 500000 }, seed) - vibeScore(plain, seed);
+  assert.ok(language > era && language > tier, `language ${language}, era ${era}, tier ${tier}`);
+});
+
+test('vibe: unknown era or popularity neither helps nor hurts', async () => {
+  const { vibeScore } = await import('./recommendations.js');
+  const track = { source: 'radio', language: 'en' };
+  assert.equal(vibeScore({ ...track }, { lang: 'en' }), vibeScore({ ...track, year: 1970, rank: 10 }, { lang: 'en' }));
+});

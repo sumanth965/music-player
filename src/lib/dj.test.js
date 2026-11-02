@@ -1,0 +1,461 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { estimateTempo, planTransition, equalPower, findMixPoint, findIntroStart } from './dj.js';
+
+test('detects regular pulses and rejects silence', () => {
+  const samples = new Float32Array(22050 * 20);
+  for (let i = 0; i < samples.length; i += 11025) for (let j = 0; j < 220; j++) samples[i + j] = Math.exp(-j / 40);
+  const tempo = estimateTempo(samples, 22050);
+  assert.ok(Math.abs(tempo.bpm - 120) < 3);
+  assert.ok(tempo.confidence >= 0.7);
+  assert.equal(estimateTempo(new Float32Array(22050), 22050), null);
+});
+test('only trustworthy close tempos receive bounded ramp', () => {
+  assert.ok(Math.abs(planTransition({ bpm: 120, confidence: .9 }, { bpm: 126, confidence: .9 }).rate - Math.sqrt(1.05)) < 1e-9);
+  assert.equal(planTransition({ bpm: 80, confidence: .9 }, { bpm: 105, confidence: .9 }).rate, 1);
+  assert.equal(planTransition({ bpm: 120, confidence: .2 }, { bpm: 126, confidence: .9 }).rate, 1);
+  const halfTime = planTransition({ bpm: 120, confidence: .9 }, { bpm: 63, confidence: .9 });
+  assert.ok(Math.abs(halfTime.rate - Math.sqrt(1.05)) < 1e-9);
+  assert.equal(halfTime.targetBpm, 126);
+});
+test('equal power overlap preserves power and endpoints', () => {
+  assert.deepEqual(equalPower(0), [1, 0]);
+  const [outgoing, incoming] = equalPower(.5);
+  assert.ok(Math.abs(outgoing ** 2 + incoming ** 2 - 1) < 1e-6);
+  assert.ok(equalPower(1)[0] < 1e-10);
+});
+
+// A 190 s song: full energy to 168 s, a quieter outro to 186 s, then silence.
+const withOutro = (rate = 100) => {
+  const samples = new Float32Array(rate * 190).fill(.4);
+  samples.fill(.15, rate * 168, rate * 186);
+  samples.fill(0, rate * 186);
+  return samples;
+};
+test('song A leaves where its outro begins, the best point in its last 30 seconds', () => {
+  const point = findMixPoint(withOutro(), 100, 8);
+  assert.ok(point >= 167 && point <= 169, String(point));
+});
+test('the blend never runs into the silent tail', () => {
+  const point = findMixPoint(withOutro(), 100, 10);
+  assert.ok(point + 10 <= 186 + 4, String(point));
+});
+test('the exit lands on a phrase boundary when the beat is known', () => {
+  // Beats every 0.5 s from 0.25 s: 4-bar phrases start every 8 s (…, 160.25, 168.25).
+  const point = findMixPoint(withOutro(), 100, 8, { origin: .25, period: .5 });
+  assert.ok(Math.abs(point - 168.25) < 1e-6 || Math.abs(point - 160.25) < 1e-6, String(point));
+});
+test('steady energy uses the natural ending and short files stay bounded', () => {
+  assert.equal(findMixPoint(new Float32Array(12000).fill(.4), 100, 5), 115);
+  assert.equal(findMixPoint(new Float32Array(1000), 100, 5), 5);
+});
+
+test('intro cue trims clear silence only and preserves music starting immediately', () => {
+  const samples = new Float32Array(1000); samples.fill(.3, 200);
+  assert.ok(Math.abs(findIntroStart(samples, 100) - 1.95) < .001);
+  assert.equal(findIntroStart(new Float32Array(1000).fill(.3), 100), 0);
+  assert.equal(findIntroStart(new Float32Array(1000), 100), 0);
+});
+
+// ── v2: tempo glide, beat grid and cue selection ─────────────────────────────
+import { snapToBeat, beatAlignedEntry, glideRate, planOnlineCue, quantizeRate, MAX_TEMPO_SHIFT } from './dj.js';
+
+const pulses = (rate, seconds, bpm, offset = 0) => {
+  const samples = new Float32Array(rate * seconds);
+  const step = rate * 60 / bpm;
+  for (let start = offset * rate; start < samples.length; start += step) for (let j = 0; j < rate / 50; j++) samples[Math.floor(start) + j] = Math.exp(-j / (rate / 500));
+  return samples;
+};
+
+test('tempo estimate reports a sub-hop accurate bpm and the beat phase', () => {
+  const tempo = estimateTempo(pulses(22050, 20, 123, .37), 22050);
+  assert.ok(Math.abs(tempo.bpm - 123) < 1.2, `bpm ${tempo.bpm}`);
+  const period = 60 / tempo.bpm;
+  const distance = Math.abs(((tempo.phase - .37) % period + period * 1.5) % period - period / 2);
+  assert.ok(distance < .03, `phase ${tempo.phase}`);
+});
+
+test('transition plan glides before a bar-quantised overlap of about five seconds', () => {
+  const plan = planTransition({ bpm: 120, confidence: .9 }, { bpm: 126, confidence: .9 });
+  assert.equal(plan.matched, true);
+  // A DJ rides the tempo over whole bars: at least four bars of the blend tempo.
+  assert.ok(plan.rampSeconds >= (4 * 240) / plan.blendBpm - 1e-9 && plan.rampSeconds <= 12, String(plan.rampSeconds));
+  assert.ok(plan.seconds >= 4 && plan.seconds <= 7);
+  const bars = plan.seconds * plan.blendBpm / 240;
+  assert.ok(Math.abs(bars - Math.round(bars)) < 1e-9);
+  const plain = planTransition(null, null);
+  assert.deepEqual([plain.rate, plain.rampSeconds, plain.seconds, plain.matched], [1, 0, 5, false]);
+  assert.equal(planTransition({ bpm: 100, confidence: .9 }, { bpm: 100 * (1 + 2 * MAX_TEMPO_SHIFT + .01), confidence: .9 }).rate, 1);
+});
+
+test('wide tempo gaps meet in the middle so neither song stretches past the bound', () => {
+  const plan = planTransition({ bpm: 120, confidence: .9 }, { bpm: 126, confidence: .9 });
+  // Song A speeds up, song B enters slowed to the same tempo, then returns to its own.
+  assert.ok(Math.abs(120 * plan.rate - 126 * plan.inRate) < 1e-9, 'both decks share one tempo during the blend');
+  assert.ok(plan.rate > 1 && plan.inRate < 1);
+  assert.ok(plan.recoverSeconds >= (4 * 240) / plan.blendBpm - 1e-9 && plan.recoverSeconds <= 12, String(plan.recoverSeconds));
+  const wide = planTransition({ bpm: 100, confidence: .9 }, { bpm: 115, confidence: .9 });
+  assert.equal(wide.matched, true);
+  assert.ok(Math.abs(wide.rate - 1) <= MAX_TEMPO_SHIFT && Math.abs(wide.inRate - 1) <= MAX_TEMPO_SHIFT);
+  // Small gaps stay on song A alone; song B plays untouched.
+  const close = planTransition({ bpm: 120, confidence: .9 }, { bpm: 124, confidence: .9 });
+  assert.ok(Math.abs(close.rate - 124 / 120) < 1e-9);
+  assert.deepEqual([close.inRate, close.recoverSeconds], [1, 0]);
+  assert.deepEqual([planTransition(null, null).inRate, planTransition(null, null).recoverSeconds], [1, 0]);
+});
+
+test('song B eases from the shared tempo back to its own after the blend', async () => {
+  const { recoverRate } = await import('./dj.js');
+  assert.equal(recoverRate(0, 4, .97), .97);
+  assert.equal(recoverRate(4, 4, .97), 1);
+  assert.ok(Math.abs(recoverRate(2, 4, .97) - .985) < 1e-9);
+  assert.equal(recoverRate(1, 0, .97), 1);
+});
+
+test('a slowed incoming deck still lands its beat on the outgoing grid', async () => {
+  const { beatAlignedEntry, phaseOffset } = await import('./dj.js');
+  // Next outgoing beat in 0.2 s of wall time; B plays at 0.95×, so it covers 0.19 s of media first.
+  const entry = beatAlignedEntry({ introStart: 1, inGrid: { origin: 1.25, period: .5 }, outPosition: 20.3, outGrid: { origin: 0, period: .5 }, rate: 1, inRate: .95 });
+  assert.ok(Math.abs(entry - (1.25 - .2 * .95)) < 1e-9);
+  // B's period at 0.95× matches A's at 1.0×: the offset is measured instead of refused.
+  const offset = phaseOffset({ inPosition: 10.05, inGrid: { origin: 0, period: .475 }, outPosition: 20, outGrid: { origin: 0, period: .5 }, outRate: 1, inRate: .95 });
+  assert.ok(Number.isFinite(offset) && offset !== 0);
+});
+
+test('the hollow sweep rises to the swap, then falls away into a tail', async () => {
+  const { sweepShape, SWEEP_TAIL } = await import('./sweep.js');
+  assert.equal(sweepShape(0).level, 0);
+  assert.equal(sweepShape(1 + SWEEP_TAIL).level, 0);
+  const peak = sweepShape(.5);
+  assert.ok(Math.abs(peak.level - 1) < 1e-9);
+  assert.ok(sweepShape(.25).level > 0 && sweepShape(.25).level < 1);
+  assert.ok(peak.frequency > sweepShape(0).frequency && peak.frequency > sweepShape(1 + SWEEP_TAIL).frequency, 'the band climbs, then sinks');
+  assert.ok(sweepShape(1 + SWEEP_TAIL).frequency < sweepShape(0).frequency, 'it ends deeper than it began');
+});
+
+test('the DJ blend holds the outgoing song, then swaps without a loudness hole', async () => {
+  const { blendCurve } = await import('./dj.js');
+  assert.deepEqual(blendCurve(0), [1, 0]);
+  const [endOut, endIn] = blendCurve(1);
+  assert.ok(endOut < 1e-9 && endIn === 1);
+  let previous = blendCurve(0);
+  for (let i = 1; i <= 100; i++) {
+    const current = blendCurve(i / 100);
+    assert.ok(current[0] <= previous[0] + 1e-12 && current[1] >= previous[1] - 1e-12, 'monotonic');
+    const power = current[0] ** 2 + current[1] ** 2;
+    assert.ok(power >= 1 - 1e-9 && power <= 1.6, `power ${power} at ${i}`);
+    previous = current;
+  }
+  // A fifth of the way in song A has not started to leave (only the shared
+  // loudness limit trims it by about 1 dB) while song B is already present.
+  assert.ok(blendCurve(.2)[0] > .84 && blendCurve(.2)[1] > .3);
+});
+
+test('glide eases from native tempo to the target and holds it', () => {
+  assert.equal(glideRate(9, 10, 5, 1.06), 1);
+  assert.equal(glideRate(15, 10, 5, 1.06), 1.06);
+  assert.ok(Math.abs(glideRate(12.5, 10, 5, 1.06) - 1.03) < 1e-9);
+  assert.ok(glideRate(10.5, 10, 5, 1.06) - 1 < .003, 'starts gently');
+  assert.equal(glideRate(20, 10, 0, 1.06), 1.06);
+});
+
+test('beat snapping and beat-aligned entry land incoming beats on the outgoing grid', () => {
+  assert.ok(Math.abs(snapToBeat(10.2, { origin: .1, period: .5 }) - 10.1) < 1e-9);
+  assert.equal(snapToBeat(10.2, null), 10.2);
+  // Outgoing at 20.3 s, beats every 0.5 s from 0 at rate 1: next beat in 0.2 s.
+  const entry = beatAlignedEntry({ introStart: 1, inGrid: { origin: 1.25, period: .5 }, outPosition: 20.3, outGrid: { origin: 0, period: .5 }, rate: 1 });
+  assert.ok(Math.abs(entry - 1.05) < 1e-9);
+  // A faster outgoing rate shortens the wall-clock wait.
+  const fast = beatAlignedEntry({ introStart: 1, inGrid: { origin: 1.25, period: .5 }, outPosition: 20.3, outGrid: { origin: 0, period: .5 }, rate: 1.25 });
+  assert.ok(Math.abs(fast - (1.25 - .2 / 1.25)) < 1e-9);
+  assert.equal(beatAlignedEntry({ introStart: 2, inGrid: null, outPosition: 5, outGrid: null, rate: 1 }), 2);
+});
+
+test('intro cue skips a noise floor relative to the music but keeps a soft intro', () => {
+  const floor = new Float32Array(1000).fill(.004); floor.fill(.3, 300);
+  assert.ok(Math.abs(findIntroStart(floor, 100) - 2.95) < .001);
+  const soft = new Float32Array(1000).fill(.05); soft.fill(.3, 300);
+  assert.equal(findIntroStart(soft, 100), 0);
+});
+
+test('online cue follows genuinely timed vocals, otherwise the natural ending', () => {
+  const lines = [{ time: 10, end: 14 }, { time: 170, end: 175, words: [{ start: 170, end: 172 }, { start: 172, end: 176 }] }];
+  assert.deepEqual(planOnlineCue(200, lines), { start: 177, end: 182, seconds: 5, source: 'lyrics' });
+  assert.deepEqual(planOnlineCue(200, [{ time: 190, end: 200 }]), { start: 193.5, end: 198.5, seconds: 5, source: 'ending' });
+  assert.deepEqual(planOnlineCue(200, [{ time: 20, end: 40 }]), { start: 193.5, end: 198.5, seconds: 5, source: 'ending' });
+  assert.equal(planOnlineCue(8, []).start, 1.5);
+});
+
+test('playback rates snap to what the player supports', () => {
+  assert.equal(quantizeRate([.25, .5, .75, 1, 1.25], 1.05), 1);
+  assert.equal(quantizeRate([.95, 1, 1.05, 1.1], 1.06), 1.05);
+  assert.equal(quantizeRate(undefined, 1.06), 1);
+});
+
+test('a late or early incoming beat is pulled back onto the grid', async () => {
+  const { phaseOffset, nudgePlan } = await import('./dj.js');
+  const grid = { origin: 0, period: .5 };
+  const push = inPosition => nudgePlan(phaseOffset({ inPosition, inGrid: grid, outPosition: 20, outGrid: grid, outRate: 1 }), 1);
+  assert.equal(push(10), null, 'on the beat: nothing to do');
+  assert.ok(push(10.05).rate < 1, 'incoming 50 ms ahead slows down');
+  assert.ok(push(9.95).rate > 1, 'incoming 50 ms behind speeds up');
+  assert.ok(Math.abs(push(10.2).rate - 1) <= .02 + 1e-9, 'never more than a 2% push');
+  assert.equal(phaseOffset({ inPosition: 10.1, inGrid: { origin: 0, period: .25 }, outPosition: 20, outGrid: grid, outRate: 1.3 }), null, 'unrelated periods are left alone');
+  assert.equal(phaseOffset({ inPosition: 10, inGrid: null, outPosition: 20, outGrid: grid, outRate: 1 }), null);
+});
+
+test('blends run in whole phrases: the longest 4, 8 or 16 bars that fit, up to 32 s', () => {
+  // 120 BPM: a bar is 2 s, so 4 / 8 / 16 bars are 8 / 16 / 32 s.
+  const at = (bpm, target) => planTransition({ bpm, confidence: .9 }, { bpm, confidence: .9 }, target).seconds;
+  assert.equal(at(120, 40), 32, 'room for 16 bars: 16 bars');
+  assert.equal(at(120, 31), 16, 'just short of 16 bars: 8 bars, never a ragged 15');
+  assert.equal(at(120, 12), 8, 'room for 4 bars: 4 bars');
+  assert.equal(at(120, 7), 6, 'no room for a phrase: the longest whole bars that fit, never under 5 s');
+  assert.equal(at(174, 40), 240 / 174 * 16, 'fast tempo: 16 bars is only 22 s');
+  assert.equal(at(70, 40), 240 / 70 * 8, 'slow tempo: 16 bars would be 55 s, so 8 bars');
+  for (const bpm of [70, 90, 120, 128, 150, 174])
+    for (const target of [5, 8, 16, 32]) {
+      const seconds = at(bpm, target);
+      assert.ok(seconds >= 5 - 1e-9 && seconds <= 32 + 1e-9, `${bpm} bpm, ${target} s → ${seconds}`);
+      const bars = seconds * bpm / 240;
+      assert.ok(Math.abs(bars - Math.round(bars)) < 1e-9 || Math.abs(seconds - 5) < 1e-9, `${bpm} bpm ${target} s → ${bars} bars`);
+    }
+  assert.equal(planTransition(null, null, 8).seconds, 8, 'unknown tempo: the requested length');
+  assert.equal(planOnlineCue(200, [], 8).seconds, 8);
+});
+
+test('players that only take 0.05 speed steps still line the tempos up', () => {
+  // 120 → 126: song A to 1.05× hits 126 exactly.
+  const up = planTransition({ bpm: 120, confidence: .9 }, { bpm: 126, confidence: .9 }, 8, { step: .05 });
+  assert.deepEqual([up.matched, up.rate, up.inRate], [true, 1.05, 1]);
+  // 120 → 133: A 1.05× (126) meets B 0.95× (126.35).
+  const wide = planTransition({ bpm: 120, confidence: .9 }, { bpm: 133, confidence: .9 }, 8, { step: .05 });
+  assert.deepEqual([wide.matched, wide.rate, wide.inRate], [true, 1.05, .95]);
+  // 120 → 123: no pair on the grid comes within 1 %, so no tempo claim.
+  const off = planTransition({ bpm: 120, confidence: .9 }, { bpm: 123, confidence: .9 }, 8, { step: .05 });
+  assert.deepEqual([off.matched, off.rate, off.inRate], [false, 1, 1]);
+});
+
+test('entry into song B matches the energy song A is leaving with, on a phrase boundary', async () => {
+  const { chooseEntry } = await import('./dj.js');
+  // 0.5 s levels: a quiet ambient intro for 16 s, then the full beat.
+  const levels = Array.from({ length: 70 }, (_, i) => (i < 32 ? .05 : .4));
+  const grid = { origin: 0, period: .5 };
+  assert.equal(chooseEntry({ levels, introStart: 0, grid, targetLevel: .4 }), 16, 'a driving outro meets the first full section');
+  assert.equal(chooseEntry({ levels, introStart: 0, grid, targetLevel: .05 }), 0, 'a quiet fade meets the soft intro');
+  assert.equal(chooseEntry({ levels, introStart: 1.2, grid, targetLevel: null }), 1.2, 'unknown energy keeps the natural start');
+  const steady = Array.from({ length: 70 }, () => .3);
+  assert.equal(chooseEntry({ levels: steady, introStart: 0, grid, targetLevel: .3 }), 0, 'equal candidates prefer the earliest');
+  assert.ok(chooseEntry({ levels, introStart: 0, grid: null, targetLevel: .4 }) <= 30, 'never skips more than 30 seconds');
+});
+
+test('online entry lets a long instrumental intro run out just as the blend completes', async () => {
+  const { planOnlineEntry } = await import('./dj.js');
+  assert.equal(planOnlineEntry([{ time: 38 }, { time: 42 }], 5), 29);
+  assert.equal(planOnlineEntry([{ time: 7 }], 5), 0, 'short intros play from the top');
+  assert.equal(planOnlineEntry([], 5), 0);
+  assert.equal(planOnlineEntry([{ time: 120 }], 5), 45, 'bounded skip');
+});
+
+test('a breakbeat (kick once a bar, snare on 2 and 4, hats) still reads its tempo', () => {
+  const rate = 22050, bpm = 100, beat = 60 / bpm;
+  const samples = new Float32Array(rate * 24);
+  const hit = (time, gain, decay) => { const start = Math.floor(time * rate); for (let j = 0; j < rate * .2 && start + j < samples.length; j++) samples[start + j] += Math.exp(-j / (rate * decay)) * gain * Math.sin(j / 3); };
+  for (let b = 0; b * beat * 4 < 24; b++) {
+    const t0 = b * beat * 4;
+    hit(t0, .9, .06);
+    hit(t0 + beat, .4, .03); hit(t0 + 3 * beat, .4, .03);
+    for (let e = 0; e < 8; e++) hit(t0 + e * beat / 2, .08, .005);
+  }
+  const tempo = estimateTempo(samples, rate);
+  assert.ok(tempo, 'tempo found');
+  const octave = [tempo.bpm, tempo.bpm * 2, tempo.bpm / 2].some(value => Math.abs(value - bpm) < 1.5);
+  assert.ok(octave, `bpm ${tempo.bpm}`);
+});
+
+test('song A leaves when its last full-energy section ends, not deep in the fade', () => {
+  // Full energy to 54 s, then an outro 10 % quieter that fades to silence by 70 s.
+  const rate = 100, samples = new Float32Array(rate * 72.5);
+  for (let i = 0; i < samples.length; i++) {
+    const t = i / rate;
+    samples[i] = t < 54 ? .16 : t < 70 ? .145 * (1 - (t - 54) / 16 * .8) : 0;
+  }
+  const point = findMixPoint(samples, rate, 8);
+  assert.ok(point >= 53 && point <= 56, String(point));
+});
+
+test('auto blend length prefers the longest blend the music leaves room for', async () => {
+  const { adaptiveBlend } = await import('./dj.js');
+  assert.equal(adaptiveBlend({}), 32, 'nothing in the way: the longest, 32 s');
+  assert.equal(adaptiveBlend({}, 16), 16, 'online, without an EQ to share the spectrum: at most 16 s');
+  assert.equal(adaptiveBlend({ outroSpan: 7.2 }), 7.2, 'song A starts singing again 7.2 s before its end');
+  assert.equal(adaptiveBlend({ outroSpan: 30, introSpan: 21 }), 21, 'song B sings after 21 s');
+  assert.equal(adaptiveBlend({ outroSpan: 2, introSpan: 3 }), 5, 'never shorter than five seconds');
+  assert.equal(adaptiveBlend({ outroSpan: Infinity, introSpan: NaN }), 32);
+});
+
+test('online outro and intro spans come from genuinely timed lyrics only', async () => {
+  const { vocalSpans } = await import('./dj.js');
+  const a = [{ time: 150, words: [{ start: 150, end: 151 }, { start: 151, end: 190.5 - 0 }] }];
+  assert.deepEqual(vocalSpans({ duration: 200, outLines: a, inLines: [{ time: 8.5 }], entry: 0 }), { outroSpan: 9.5, introSpan: 8.5 });
+  assert.deepEqual(vocalSpans({ duration: 200, outLines: [], inLines: [], entry: 0 }), { outroSpan: Infinity, introSpan: Infinity });
+  assert.deepEqual(vocalSpans({ duration: 200, outLines: [], inLines: [{ time: 40 }], entry: 25 }), { outroSpan: Infinity, introSpan: 15 });
+  const lead = [{ time: 8, words: [{ start: 11.2, end: 11.6 }] }];
+  assert.equal(vocalSpans({ duration: 200, inLines: lead, entry: 0 }).introSpan, 11.2, 'the first sung word, not the line start');
+});
+
+test('beat offset is measured beat to beat, even when a grid was read at half tempo', async () => {
+  const { phaseOffset } = await import('./dj.js');
+  // Song A at 123 BPM; song B's grid was read at half its tempo (63 BPM instead of 126),
+  // played at 0.9759 so both beat at 123.
+  const outGrid = { origin: 0, period: 60 / 120 }, inGrid = { origin: 0, period: 60 / 63 };
+  const at = { inGrid, outPosition: 10 * outGrid.period, outGrid, outRate: 1.025, inRate: 0.9759 };
+  assert.ok(Math.abs(phaseOffset({ ...at, inPosition: 7 * (60 / 126) + 0.04 }) - 0.04) < 1e-9, 'B 40 ms (its own time) ahead');
+  assert.ok(Math.abs(phaseOffset({ ...at, inPosition: 7 * (60 / 126) - 0.03 }) + 0.03) < 1e-9, 'B 30 ms behind');
+  assert.equal(phaseOffset({ ...at, inGrid: { origin: 0, period: 60 / 100 } }), null, 'unrelated tempos: no lock');
+});
+
+test('a beat slip is closed with one short push, like a DJ on the platter', async () => {
+  const { nudgePlan } = await import('./dj.js');
+  const ahead = nudgePlan(0.04, 0.9759);
+  assert.ok(ahead.rate < 0.9759 && Math.abs(ahead.rate / 0.9759 - 0.98) < 1e-9, 'B ahead eases off by 2%');
+  assert.ok(Math.abs(ahead.seconds - 0.04 / (0.9759 * 0.02)) < 1e-9, 'for exactly as long as the slip needs');
+  const behind = nudgePlan(-0.03, 1);
+  assert.ok(Math.abs(behind.rate - 1.02) < 1e-9 && Math.abs(behind.seconds - 1.5) < 1e-9, 'a 30 ms slip is pushed');
+  assert.equal(nudgePlan(0.02, 1), null, 'a slip too small to hear as a flam is left alone');
+  assert.ok(nudgePlan(0.2, 1).seconds <= 3, 'a push never lasts more than three seconds');
+});
+
+test('the bass swap lands on a bar line of the outgoing song', async () => {
+  const { swapTime } = await import('./dj.js');
+  // Song A: 120 BPM (bar = 2 s) from 0; it plays at 1.0 from position 61.3 s, blend 8 s.
+  const at = swapTime({ now: 100, seconds: 8, outPosition: 61.3, outGrid: { origin: 0, period: .5 }, rate: 1 });
+  // Midpoint is 104 (A at 65.3); the nearest bar line is A at 66 → wall 104.7.
+  assert.ok(Math.abs(at - 104.7) < 1e-9, String(at));
+  // At 1.05× song A reaches its bar line sooner in wall time.
+  const faster = swapTime({ now: 100, seconds: 8, outPosition: 61.3, outGrid: { origin: 0, period: .5 }, rate: 1.05 });
+  assert.ok(Math.abs(faster - (100 + (66 - 61.3) / 1.05)) < 1e-9, String(faster));
+  // The swap stays inside the middle of the blend; without a grid it is the midpoint.
+  assert.equal(swapTime({ now: 100, seconds: 8, outPosition: 61.3, outGrid: null, rate: 1 }), 104);
+  const late = swapTime({ now: 100, seconds: 5, outPosition: 0.9, outGrid: { origin: 0, period: 1 }, rate: 1 });
+  assert.ok(late >= 100 + 5 * .3 && late <= 100 + 5 * .7, String(late));
+});
+
+test('a long blend holds both songs through the middle and keeps its loudness', async () => {
+  const { blendCurve } = await import('./dj.js');
+  for (const seconds of [8, 16, 24, 32]) {
+    assert.deepEqual(blendCurve(0, seconds), [1, 0]);
+    const [endOut, endIn] = blendCurve(1, seconds);
+    assert.ok(endOut < 1e-9 && Math.abs(endIn - 1) < 1e-9, `${seconds} s ends on song B alone`);
+    let previous = blendCurve(0, seconds);
+    for (let i = 1; i <= 200; i++) {
+      const current = blendCurve(i / 200, seconds);
+      assert.ok(current[0] <= previous[0] + 1e-12 && current[1] >= previous[1] - 1e-12, `${seconds} s monotonic at ${i}`);
+      const power = current[0] ** 2 + current[1] ** 2;
+      assert.ok(power >= 1 - 1e-9 && power <= 1.26 + 1e-9, `${seconds} s power ${power.toFixed(3)} at ${i / 200}`);
+      previous = current;
+    }
+  }
+  // 32 s: song B is in by a third of the way; song A holds until two thirds.
+  assert.ok(blendCurve(.34, 32)[1] > .7, 'B in early');
+  assert.ok(blendCurve(.66, 32)[0] > .7, 'A held through the middle');
+  assert.ok(blendCurve(.5, 32).every(level => level > .7), 'both at full body mid-blend');
+  // 8 s: a fifth of the way in song A still holds (within 1.5 dB) under song B.
+  assert.ok(blendCurve(.2, 8)[0] > .84);
+});
+
+test('tempo is read precisely enough to hold a 16-bar blend together', async () => {
+  const { estimateTempo } = await import('./dj.js');
+  const rate = 22050;
+  for (const bpm of [96.37, 122.1, 127.93, 140.6]) {
+    const seconds = 24, data = new Float32Array(rate * seconds);
+    for (let beat = 0; beat * 60 / bpm < seconds - .2; beat++) {
+      const start = Math.round(beat * 60 / bpm * rate);
+      for (let i = 0; i < rate * .12 && start + i < data.length; i++) data[start + i] += Math.sin(2 * Math.PI * 60 * i / rate) * Math.exp(-i / rate * 30) * (beat % 4 === 0 ? 1 : .7);
+    }
+    const found = estimateTempo(data, rate);
+    // 0.02 % keeps two songs within 6 ms over a 32-second blend. A half- or
+    // double-time reading is the same grid (the planner matches octaves).
+    const error = Math.min(...[bpm, bpm / 2, bpm * 2].map(value => Math.abs(found.bpm / value - 1)));
+    assert.ok(error < .0002, `${bpm} read as ${found.bpm}`);
+  }
+});
+
+test('the online sweep is deep and subtle: a low band, quiet, with a long sub underneath', async () => {
+  const { sweepShape, SWEEP_TAIL, SWEEP_LEVEL, SUB_LEVEL } = await import('./sweep.js');
+  let highest = 0;
+  for (let i = 0; i <= 100; i++) highest = Math.max(highest, sweepShape((i / 100) * (1 + SWEEP_TAIL)).frequency);
+  assert.ok(highest <= 1000, `the band peaks at ${Math.round(highest)} Hz: hiss, not depth`);
+  assert.ok(sweepShape(1 + SWEEP_TAIL).frequency <= 120, 'it ends in the bass');
+  assert.ok(SWEEP_LEVEL <= 0.2, `noise level ${SWEEP_LEVEL} sits over the music`);
+  assert.ok(SUB_LEVEL > SWEEP_LEVEL, 'the depth (sub) leads, the noise follows');
+});
+
+test('bigger tempo changes glide longer, never past twelve seconds', async () => {
+  const small = planTransition({ bpm: 120, confidence: .9 }, { bpm: 122, confidence: .9 });
+  const large = planTransition({ bpm: 100, confidence: .9 }, { bpm: 114, confidence: .9 });
+  assert.ok(large.rampSeconds > small.rampSeconds, `${large.rampSeconds} vs ${small.rampSeconds}`);
+  assert.ok(large.rampSeconds <= 12 && large.recoverSeconds <= 12);
+});
+
+test('a tempo glide moves in even steps and lands exactly on its target', async () => {
+  const { gridRate } = await import('./dj.js');
+  const grain = .003;
+  let previous = 1;
+  for (let i = 0; i <= 100; i += 1) {
+    const value = 1 + (1.0249 - 1) * (i / 100);
+    const rate = gridRate(value, 1, 1.0249, grain);
+    assert.ok(Math.abs(rate - previous) <= grain + 1e-9, `${previous} → ${rate}`);
+    previous = rate;
+  }
+  assert.equal(previous, 1.0249);
+  assert.equal(gridRate(.99, .9757, 1, grain) <= 1, true);
+  assert.equal(gridRate(1, .9757, 1, grain), 1);
+  assert.equal(gridRate(1.01, 1, 1, grain), 1);
+});
+
+test('a blend is a real blend: both songs ride together through the middle', async () => {
+  const { blendCurve } = await import('./dj.js');
+  const db = value => 20 * Math.log10(Math.max(value, 1e-9));
+  for (const seconds of [5, 8, 10, 16, 32]) {
+    let six = 0, three = 0;
+    const steps = 400;
+    for (let i = 0; i <= steps; i++) {
+      const [out, into] = blendCurve(i / steps, seconds);
+      if (db(out) >= -6 && db(into) >= -6) six++;
+      if (db(out) >= -3 && db(into) >= -3) three++;
+    }
+    assert.ok(six / steps >= .6, `${seconds} s: both within 6 dB for ${(six / steps * 100).toFixed(0)} %`);
+    assert.ok(three / steps >= .35, `${seconds} s: both within 3 dB for ${(three / steps * 100).toFixed(0)} %`);
+    // Song B still comes in from silence and song A still leaves into it.
+    assert.ok(db(blendCurve(.04, seconds)[1]) < -20 && db(blendCurve(.96, seconds)[0]) < -20, `${seconds} s gentle ends`);
+  }
+});
+
+test('the tempo change goes to the song where it is least heard', async () => {
+  const { planTransition, chooseBend } = await import('./dj.js');
+  const a = { bpm: 120, confidence: 0.9 }, b = { bpm: 123, confidence: 0.9 };
+  // Keep A as it is; B comes in at A's tempo and eases back to its own.
+  const keepA = planTransition(a, b, 8, { bend: 'incoming' });
+  assert.equal(keepA.rate, 1);
+  assert.ok(Math.abs(keepA.inRate - 120 / 123) < 1e-9 && keepA.matched);
+  assert.equal(keepA.rampSeconds, 0);
+  assert.ok(keepA.recoverSeconds >= (4 * 240) / 120 - 1e-9, String(keepA.recoverSeconds));
+  // A slows or speeds into B's tempo; B plays as it is.
+  const moveA = planTransition(a, b, 8, { bend: 'outgoing' });
+  assert.ok(Math.abs(moveA.rate - 123 / 120) < 1e-9 && moveA.inRate === 1 && moveA.recoverSeconds === 0);
+  // Both share it: each moves half the way.
+  const share = planTransition(a, b, 8, { bend: 'split' });
+  assert.ok(Math.abs(share.rate * 120 - share.inRate * 123) < 1e-6 && share.rate > 1 && share.inRate < 1);
+  // Too far for one song alone: always shared, whatever was asked.
+  const wide = planTransition({ bpm: 100, confidence: 0.9 }, { bpm: 110, confidence: 0.9 }, 8, { bend: 'incoming' });
+  assert.ok(wide.rate > 1 && wide.inRate < 1, JSON.stringify(wide));
+
+  // Where are the voices? A change is least heard where nobody sings.
+  const base = { seconds: 8, ramp: 8, recover: 8 };
+  assert.equal(chooseBend({ ...base, introSpan: 14, outroSpan: 2 }), 'incoming', 'B opens instrumental');
+  assert.equal(chooseBend({ ...base, introSpan: 1, outroSpan: 16 }), 'outgoing', 'A ends instrumental');
+  assert.equal(chooseBend({ ...base, introSpan: 1, outroSpan: 2 }), 'split', 'voices on both sides: halve each change');
+  assert.equal(chooseBend({ ...base, introSpan: Infinity, outroSpan: Infinity }), 'incoming', 'unknown: leave the song being heard alone');
+  assert.equal(chooseBend({ ...base, introSpan: 1, outroSpan: Infinity }), 'split');
+});

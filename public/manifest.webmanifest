@@ -1,0 +1,50 @@
+{
+  "name": "Swar Music Player",
+  "short_name": "Swar",
+  "description": "Your music, closer.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#151717",
+  "theme_color": "#151717",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "id": "/",
+  "categories": [
+    "music",
+    "entertainment"
+  ],
+  "shortcuts": [
+    {
+      "name": "Search",
+      "url": "/?open=search",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Your library",
+      "url": "/?open=library",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
+}
