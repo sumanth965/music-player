@@ -90,8 +90,8 @@ export default function Welcome({ onLeave }) {
           />
           <Motion.img
             ref={image}
-            src="/swar-welcome.svg"
-            alt=""
+            src="/swar-welcome.svg?v=2"
+            alt="Swar"
             width="466"
             height="94"
             onError={() => {

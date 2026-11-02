@@ -4353,7 +4353,6 @@ button {
 }
 
 /* ── Opening ─────────────────────────────────────────────────────────────── */
-.swar-welcome,
 .swar-welcome {
   position: fixed;
   inset: 0;
@@ -4361,21 +4360,21 @@ button {
   display: grid;
   place-items: center;
   pointer-events: none;
-  background: #111314;
+  background: radial-gradient(circle at 50% 50%, #150f0a 0%, #0c0806 100%);
   overflow: hidden;
 }
-.swar-welcome img,
 .swar-welcome img {
   position: relative;
-  width: min(72vw, 365px);
+  width: min(78vw, 420px);
   height: auto;
+  filter: drop-shadow(0 12px 32px rgba(234, 114, 46, 0.18));
 }
 .welcome-glow {
   position: absolute;
   width: min(120vw, 900px);
   aspect-ratio: 1;
   border-radius: 50%;
-  background: radial-gradient(circle, #c3ebcf1f 0%, #2a2d2e66 38%, transparent 70%);
+  background: radial-gradient(circle at 50% 50%, rgba(255, 115, 67, 0.26) 0%, rgba(245, 158, 11, 0.12) 32%, rgba(20, 13, 8, 0.6) 65%, transparent 75%);
 }
 .swar-app,
 .swar-app {
