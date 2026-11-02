@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   FileText,
   FileAudio,
@@ -32,6 +32,13 @@ export default function SongTextData({ player }) {
   const [localStatus, setLocalStatus] = useState("");
   const [transcribeError, setTranscribeError] = useState("");
   const lrcInputRef = useRef(null);
+
+  useEffect(() => {
+    const key = getGroqApiKey();
+    if (key && !customKey) {
+      setCustomKey(key);
+    }
+  }, [track]);
 
   if (!track) return null;
 
@@ -67,6 +74,9 @@ export default function SongTextData({ player }) {
 
   const handleTranscribeClick = async () => {
     setTranscribeError("");
+    if (customKey && customKey.trim()) {
+      setGroqApiKey(customKey.trim());
+    }
     setLocalTranscribing(true);
     setLocalStatus("Accessing audio track...");
 

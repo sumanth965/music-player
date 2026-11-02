@@ -5,8 +5,8 @@
  */
 
 const DEFAULT_GROQ_KEY =
-  (typeof process !== 'undefined' && process.env?.VITE_GROQ_API_KEY) ||
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GROQ_API_KEY) ||
+  (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GROQ_API_KEY) ||
+  (typeof process !== 'undefined' && process.env && process.env.VITE_GROQ_API_KEY) ||
   '';
 const LOCAL_BACKEND_URL = 'http://localhost:8000';
 
