@@ -7,12 +7,24 @@
 // An explicit VITE_API_BASE_URL still wins (useful for local dev against a
 // separate backend), EXCEPT when it points at the dead Fly.dev host, in which
 // case we self-heal back to same-origin.
+const DEFAULT_REMOTE_BACKEND = 'https://swar-player-backend.onrender.com';
+
 let configured = (
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
   (typeof localStorage !== 'undefined' && localStorage.getItem('swar_api_base_url')) ||
   ''
 ).replace(/\/$/, '');
 if (/fly\.dev/i.test(configured)) configured = '';
+
+// When deployed to Render static sites or remote hosts where VITE_API_BASE_URL was not baked in,
+// fallback to the live Swar Render backend instead of calling the static site origin.
+if (!configured && typeof window !== 'undefined') {
+  const hostname = window.location.hostname;
+  const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
+  if (!isLocal) {
+    configured = DEFAULT_REMOTE_BACKEND;
+  }
+}
 
 const API_BASE_URL = configured;
 
