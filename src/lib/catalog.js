@@ -1,4 +1,5 @@
 import { rankForTaste } from './listening';
+import { buildApiUrl } from './api.js';
 
 export function normalizeTrack(item) {
   return { id: String(item.id || item.trackId), title: item.title || item.trackName || 'Untitled', artist: item.artist || item.artistName || 'Unknown artist', album: item.album || item.collectionName || '', artwork: (item.artwork || item.artworkUrl100 || '').replace(/100x100bb/, '600x600bb'), duration: item.duration ?? (item.trackTimeMillis || 0) / 1000, previewUrl: item.previewUrl, videoId: item.videoId, source: item.source, localUrl: item.localUrl, artistId: item.artistId, genre: item.genre || item.primaryGenreName, recommended: item.recommended === true, recommendationReason: item.recommendationReason, lyrics: item.lyrics || null };
@@ -198,7 +199,7 @@ export async function searchCatalog(query, type = 'all', signal) {
   if (!term) return { top: null, songs: [], videos: [], albums: [], artists: [], playlists: [] };
   const key = `${type}\u0000${term.toLowerCase()}`;
   if (searchCache.has(key)) return searchCache.get(key);
-  const response = await fetch(`/api/search?${new URLSearchParams({ term, type })}`, { signal });
+  const response = await fetch(buildApiUrl('/api/search', { term, type }), { signal });
   if (!response.ok) throw new Error('The music catalogue is unavailable.');
   const data = await response.json();
   return remember(searchCache, key, {
@@ -218,7 +219,7 @@ export async function searchTracks(query, signal) {
 export async function getCollection(type, id, signal) {
   const key = `${type}:${id}`;
   if (collectionCache.has(key)) return collectionCache.get(key);
-  const response = await fetch(`/api/collection?${new URLSearchParams({ type, id: String(id) })}`, { signal });
+  const response = await fetch(buildApiUrl('/api/collection', { type, id: String(id) }), { signal });
   if (!response.ok) throw new Error('This collection could not be opened.');
   const data = await response.json();
   return remember(collectionCache, key, { ...data, tracks: (Array.isArray(data.tracks) ? data.tracks : []).filter(item => item?.id && item.title).map(normalizeTrack) });
@@ -230,12 +231,12 @@ export async function getFeaturedTracks(signal) {
 
 export async function getSimilarTracks(track, signal, { lang } = {}) {
   if (!track?.artist || !track?.title || track.localUrl) return [];
-  const query = new URLSearchParams({ artist: track.artist, title: track.title });
-  if (track.album) query.set('album', track.album);
-  if (track.genre) query.set('genre', String(track.genre).slice(0, 60));
-  if (track.duration > 0) query.set('duration', String(Math.round(track.duration)));
-  if (lang) query.set('lang', lang);
-  const response = await fetch(`/api/recommendations?${query}`, { signal });
+  const params = { artist: track.artist, title: track.title };
+  if (track.album) params.album = track.album;
+  if (track.genre) params.genre = String(track.genre).slice(0, 60);
+  if (track.duration > 0) params.duration = String(Math.round(track.duration));
+  if (lang) params.lang = lang;
+  const response = await fetch(buildApiUrl('/api/recommendations', params), { signal });
   if (!response.ok) throw new Error('Similar songs are temporarily unavailable.');
   const data = await response.json();
   return rankForTaste((Array.isArray(data.tracks) ? data.tracks : []).filter(item => item.id && item.title && item.artist).map(item => ({ ...normalizeTrack(item), lyricsAvailable: item.lyricsAvailable })));
@@ -246,7 +247,8 @@ const moodCache = new Map();
 export async function getMoodTracks(mood, signal, { lang } = {}) {
   const key = `${mood}:${lang || ''}`;
   if (!moodCache.has(key)) {
-    const response = await fetch(`/api/mood?${new URLSearchParams(lang ? { mood, lang } : { mood })}`, { signal });
+    const params = lang ? { mood, lang } : { mood };
+    const response = await fetch(buildApiUrl('/api/mood', params), { signal });
     if (!response.ok) throw new Error('This mood is unavailable right now.');
     const data = await response.json();
     remember(moodCache, key, (Array.isArray(data.tracks) ? data.tracks : []).filter(item => item?.id && item.title && item.artist).map(normalizeTrack));
@@ -261,8 +263,8 @@ export async function getTrackTempo(track, signal) {
 
 // Catalogue tempo plus, for the exact video playing, YouTube's "Most replayed" markers.
 export async function getTrackAnalysis(track, videoId, signal) {
-  const query = new URLSearchParams({ artist: track.artist, title: track.title, ...(videoId ? { video: videoId } : {}) });
-  const response = await fetch(`/api/tempo?${query}`, { signal });
+  const params = { artist: track.artist, title: track.title, ...(videoId ? { video: videoId } : {}) };
+  const response = await fetch(buildApiUrl('/api/tempo', params), { signal });
   const body = await response.json().catch(() => ({}));
   const replays = Array.isArray(body.replays) ? body.replays : [];
   if (!response.ok && !replays.length) throw new Error('Tempo metadata is unavailable.');

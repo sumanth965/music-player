@@ -6,6 +6,15 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import { scraper } from './scraper.js';
 import { lyricsCache } from './cache.js';
+import multer from 'multer';
+import {
+  handleSearch,
+  handleCollection,
+  handleRecommendations,
+  handleMood,
+  handleTempo,
+  handleTranscribe,
+} from './catalog.js';
 
 const execAsync = promisify(exec);
 
@@ -276,9 +285,55 @@ const extractChannelMap = (html: string): Map<string, string> => {
   return map;
 };
 
-// Allow CORS from Vite frontend
-app.use(cors({ origin: '*' }));
+// Configure production CORS
+const allowedOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
+  : '*';
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (
+        allowedOrigins === '*' ||
+        (Array.isArray(allowedOrigins) &&
+          (allowedOrigins.includes('*') || allowedOrigins.includes(origin)))
+      ) {
+        return callback(null, true);
+      }
+      // Allow Render static site domains (*.onrender.com)
+      if (/\.onrender\.com$/.test(origin)) {
+        return callback(null, true);
+      }
+      // Allow local development
+      if (/^http:\/\/localhost(:\d+)?$/.test(origin)) {
+        return callback(null, true);
+      }
+      return callback(null, false);
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'HEAD', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Range'],
+    exposedHeaders: ['Content-Range', 'Accept-Ranges', 'Content-Length'],
+  })
+);
 app.use(express.json());
+
+// Memory storage for audio file transcription (25MB limit)
+const upload = multer({
+  limits: { fileSize: 25 * 1024 * 1024 },
+  storage: multer.memoryStorage(),
+});
+
+// ─── Catalogue, Search & Discovery Routes ─────────────────────────────────────
+app.get('/api/search', handleSearch);
+app.get('/api/collection', handleCollection);
+app.get('/api/recommendations', handleRecommendations);
+app.get('/api/mood', handleMood);
+app.get('/api/tempo', handleTempo);
+
+// ─── Secure AI Whisper Audio Transcription ────────────────────────────────────
+app.post('/api/transcribe', upload.single('file'), handleTranscribe);
 
 // ─── Health Check ─────────────────────────────────────────────────────────────
 app.get('/api/health', (req: Request, res: Response) => {
@@ -686,8 +741,9 @@ app.head('/api/stream', async (req: Request, res: Response) => {
 import http from 'http';
 
 const server = http.createServer(app);
-server.listen(PORT, () => {
-  console.log(`[SWAR] Backend v3.1 running on http://localhost:${PORT}`);
+const portNum = Number(PORT) || 3001;
+server.listen(portNum, '0.0.0.0', () => {
+  console.log(`[SWAR] Backend v3.2 running on http://0.0.0.0:${portNum}`);
   console.log(`[SWAR] Video matching: Strict title+duration gates | Topic/VEVO priority | Early-exit enabled`);
   if (process.env.RAPIDAPI_KEY) {
     console.log(`[SWAR] RapidAPI Key: ✓ detected`);

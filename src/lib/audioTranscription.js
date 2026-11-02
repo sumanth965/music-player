@@ -4,6 +4,8 @@
  * Uses Groq Whisper (whisper-large-v3) with fallback to local LyricSense backend (port 8000).
  */
 
+import { buildApiUrl } from './api.js';
+
 const DEFAULT_GROQ_KEY =
   (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GROQ_API_KEY) ||
   (typeof process !== 'undefined' && process.env && process.env.VITE_GROQ_API_KEY) ||
@@ -218,11 +220,47 @@ export async function transcribeSongAudio(file, options = {}) {
     }
   }
 
-  // Cloud transcription via Groq whisper-large-v3
+  // 1. Try Backend API endpoint (where GROQ_API_KEY is securely configured on the server)
+  try {
+    const backendTranscribeUrl = buildApiUrl('/api/transcribe');
+    const uploadFile = await optimizeAudioForTranscription(file);
+    const backendFormData = new FormData();
+    backendFormData.append('file', uploadFile);
+    backendFormData.append('model', 'whisper-large-v3');
+    if (language && language !== 'auto') {
+      backendFormData.append('language', language);
+    }
+
+    const headers = {};
+    const localKey = getGroqApiKey();
+    if (localKey) {
+      headers['Authorization'] = `Bearer ${localKey}`;
+    }
+
+    onProgress?.('Transcribing via Swar Cloud AI Whisper...');
+    const backendRes = await fetch(backendTranscribeUrl, {
+      method: 'POST',
+      headers,
+      body: backendFormData,
+      signal,
+    });
+
+    if (backendRes.ok) {
+      const data = await backendRes.json();
+      if (data && (data.text || data.segments || data.words)) {
+        return formatTranscriptionResult(data, 'groq');
+      }
+    }
+  } catch (err) {
+    if (err.name === 'AbortError') throw err;
+    console.warn('[AudioTranscription] Backend transcription unavailable, falling back to direct Groq Cloud:', err);
+  }
+
+  // 2. Direct client fallback via Groq whisper-large-v3 if backend not available
   onProgress?.('Transcribing with Groq AI Whisper...');
   const apiKey = getGroqApiKey();
   if (!apiKey) {
-    throw new Error('Groq API Key not configured. Please add an API key in settings.');
+    throw new Error('Groq API Key not configured. Please add an API key in settings or backend.');
   }
 
   const uploadFile = await optimizeAudioForTranscription(file);

@@ -7,7 +7,11 @@
 // An explicit VITE_API_BASE_URL still wins (useful for local dev against a
 // separate backend), EXCEPT when it points at the dead Fly.dev host, in which
 // case we self-heal back to same-origin.
-let configured = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
+let configured = (
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
+  (typeof localStorage !== 'undefined' && localStorage.getItem('swar_api_base_url')) ||
+  ''
+).replace(/\/$/, '');
 if (/fly\.dev/i.test(configured)) configured = '';
 
 const API_BASE_URL = configured;
