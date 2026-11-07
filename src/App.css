@@ -1050,10 +1050,117 @@ svg {
   min-height: 44px;
   cursor: pointer;
 }
+/* Recommendation Section & Header */
+.music-section.for-you {
+  margin-bottom: 44px;
+}
+.recommendation-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  gap: 16px;
+}
+.recommendation-title-group {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.recommendation-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: rgba(217, 119, 54, 0.12);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: #d97736;
+}
+.rec-header-icon {
+  color: #d97736;
+}
+.recommendation-heading {
+  font-family: var(--font-serif);
+  font-size: 25px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #2b1b11;
+  margin: 0;
+  line-height: 1.25;
+}
+.recommendation-heading .highlight-song {
+  color: #d97736;
+  font-style: italic;
+  font-weight: 700;
+}
+.recommendation-subtitle {
+  font-size: 13px;
+  color: #7a6858;
+  margin: 4px 0 0 0;
+}
+.recommendation-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.rec-play-all-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid #ded3c2;
+  color: #d97736;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(60, 35, 15, 0.05);
+  transition: all 180ms ease;
+}
+.rec-play-all-btn:hover {
+  background: #fdfaf6;
+  border-color: #d97736;
+  color: #c46424;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(217, 119, 54, 0.15);
+}
+.rec-nav-arrows {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rec-arrow-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1px solid #ded3c2;
+  color: #675546;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(60, 35, 15, 0.04);
+  transition: all 180ms ease;
+}
+.rec-arrow-btn:hover {
+  background: #fdfaf6;
+  border-color: #d97736;
+  color: #d97736;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(60, 35, 15, 0.1);
+}
+.rec-arrow-btn:active {
+  transform: scale(0.95);
+}
+
+/* Album & Recommendation Card */
 .album-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 18px;
 }
 .album-card {
   min-width: 0;
@@ -1064,21 +1171,21 @@ svg {
   flex-direction: column;
   background: #ffffff;
   border: 1px solid #ebe1d2;
-  border-radius: 18px;
-  box-shadow: 0 2px 8px rgba(60, 35, 15, 0.04);
+  border-radius: 20px;
+  box-shadow: 0 4px 16px rgba(60, 35, 15, 0.05);
   box-sizing: border-box;
   position: relative;
   transition:
-    transform 0.24s cubic-bezier(0.23, 1, 0.32, 1),
-    background-color 0.24s ease,
-    border-color 0.24s ease,
-    box-shadow 0.24s cubic-bezier(0.23, 1, 0.32, 1);
+    transform 300ms ease,
+    background-color 300ms ease,
+    border-color 300ms ease,
+    box-shadow 300ms ease;
 }
 .album-card:hover {
-  transform: translateY(-4px);
+  transform: translateY(-3px);
   background: #ffffff;
-  border-color: #dfd0bc;
-  box-shadow: 0 12px 28px rgba(60, 35, 15, 0.1);
+  border-color: #dbc9b5;
+  box-shadow: 0 12px 28px rgba(60, 35, 15, 0.12);
 }
 .album-card:focus-visible {
   outline: 2px solid var(--accent);
@@ -1089,42 +1196,93 @@ svg {
   aspect-ratio: 1;
   width: 100%;
   margin-bottom: 10px;
-  border-radius: 13px;
+  border-radius: 14px;
   overflow: hidden;
   flex-shrink: 0;
 }
 .album-image .cover {
   width: 100%;
   height: 100%;
-  border-radius: 13px;
+  border-radius: 14px;
   overflow: hidden;
   border: 0;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  background: #ede3d4;
+  position: relative;
 }
+.album-image .cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 300ms ease, filter 300ms ease;
+}
+.album-card:hover .cover img {
+  transform: scale(1.08);
+  filter: brightness(1.03);
+}
+
+/* Heart button in top-right of album cover */
+.card-heart-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  cursor: pointer;
+  z-index: 3;
+  transition: transform 200ms ease, background 200ms ease, border-color 200ms ease;
+}
+.card-heart-btn:hover {
+  transform: scale(1.1);
+  background: rgba(0, 0, 0, 0.48);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+.card-heart-btn.is-liked {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: #d97736;
+}
+
+/* Circular Play Button Overlay */
 .album-play {
   position: absolute;
   right: 8px;
   bottom: 8px;
-  background: #d97736;
-  color: #ffffff;
+  background: #ffffff;
+  color: #d97736;
   width: 38px;
   height: 38px;
   border-radius: 50%;
   display: grid;
   place-items: center;
   opacity: 0;
-  transform: translateY(6px);
+  transform: scale(0.85);
   transition:
-    opacity 0.2s cubic-bezier(0.23, 1, 0.32, 1),
-    transform 0.2s cubic-bezier(0.23, 1, 0.32, 1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+    opacity 250ms ease,
+    transform 250ms ease;
+  box-shadow: 0 4px 14px rgba(60, 35, 15, 0.25);
   z-index: 2;
 }
-.album-card:hover .album-play,
-.album-card:focus-visible .album-play {
-  opacity: 1;
-  transform: translateY(0);
+.album-play svg {
+  margin-left: 2px;
 }
+.album-card:hover .album-play,
+.album-card:focus-visible .album-play,
+.album-play.playing {
+  opacity: 1;
+  transform: scale(1);
+}
+.album-play.playing svg {
+  margin-left: 0;
+}
+
 .album-card > strong {
   display: block;
   font-size: 13.5px;
@@ -1132,7 +1290,7 @@ svg {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  font-weight: 600;
+  font-weight: 700;
   color: #2b1b11;
   width: 100%;
   margin-top: 2px;
@@ -1140,13 +1298,57 @@ svg {
 .album-card > span {
   font-size: 12px;
   line-height: 1.3;
-  color: #847365;
+  color: #7a6858;
   display: block;
   margin-top: 3px;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
   width: 100%;
+  font-weight: 500;
+}
+
+/* Subtle Orange Waveform Decoration at card bottom */
+.card-waveform {
+  display: flex;
+  align-items: flex-end;
+  gap: 2.5px;
+  height: 16px;
+  margin-top: 10px;
+  padding-top: 2px;
+}
+.card-waveform span {
+  width: 2.5px;
+  background: linear-gradient(180deg, #e88d4d 0%, #d97736 100%);
+  border-radius: 2px;
+  display: inline-block;
+  opacity: 0.85;
+  transition: opacity 0.2s ease;
+}
+.album-card:hover .card-waveform span {
+  opacity: 1;
+}
+.is-playing-card .card-waveform span:nth-child(2n) {
+  animation: waveBounce 1.2s ease-in-out infinite alternate;
+}
+.is-playing-card .card-waveform span:nth-child(2n + 1) {
+  animation: waveBounce 0.9s ease-in-out infinite alternate 0.2s;
+}
+@keyframes waveBounce {
+  0% { transform: scaleY(0.4); }
+  100% { transform: scaleY(1.15); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .album-image .cover img,
+  .album-card:hover .cover img,
+  .album-card,
+  .album-card:hover,
+  .card-waveform span {
+    transition: none !important;
+    transform: none !important;
+    animation: none !important;
+  }
 }
 .browse-footer {
   border-top: 1px solid #e7ded0;
@@ -4428,6 +4630,18 @@ button {
   }
 }
 @media (max-width: 760px) {
+  .recommendation-header {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .recommendation-heading {
+    font-size: 20px;
+  }
+  .recommendation-icon-wrap {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+  }
   .shelf {
     grid-auto-columns: 140px;
     gap: 12px;
@@ -9661,6 +9875,35 @@ html.lenis body {
   background: rgba(255, 255, 255, 0.06);
   border-color: rgba(255, 255, 255, 0.1);
   color: #d1b194;
+}
+
+.swar-app.dark-theme .recommendation-heading {
+  color: #f5ede4;
+}
+.swar-app.dark-theme .recommendation-heading .highlight-song {
+  color: #f79d5c;
+}
+.swar-app.dark-theme .recommendation-subtitle {
+  color: #a89788;
+}
+.swar-app.dark-theme .rec-play-all-btn,
+.swar-app.dark-theme .rec-arrow-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #f79d5c;
+}
+.swar-app.dark-theme .rec-arrow-btn {
+  color: #c2b1a1;
+}
+.swar-app.dark-theme .rec-play-all-btn:hover,
+.swar-app.dark-theme .rec-arrow-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: #f79d5c;
+  color: #ffb885;
+}
+.swar-app.dark-theme .album-play {
+  background: #ffffff;
+  color: #d97736;
 }
 
 .swar-app.dark-theme .album-card {

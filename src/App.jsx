@@ -18,6 +18,7 @@ import {
   ArrowLeft,
   ArrowRight,
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
   Focus,
   Disc3,
@@ -1794,6 +1795,13 @@ export default function App() {
     if (searchRef.current) searchRef.current.focus();
     else focusSearchOnMount.current = true;
   };
+  const shelfRefs = useRef({});
+  const scrollShelf = useCallback((id, dir) => {
+    const el = shelfRefs.current[id];
+    if (el) {
+      el.scrollBy({ left: dir * 380, behavior: "smooth" });
+    }
+  }, []);
   const fileRef = useRef(null);
   const folderRef = useRef(null);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
@@ -3282,30 +3290,119 @@ export default function App() {
                       ))}
                     </div>
                   </section>
-                  {!moodMode && forYou.map(({ seed, tracks }) => (
+                  {!moodMode && forYou.map(({ seed, tracks }, sIdx) => (
                     <RevealSection key={seed.id} className="music-section for-you">
-                      <div className="section-heading">
-                        <div>
-                          <h2>{seed.id === nowSeed?.id ? `More like ${seed.title}` : `Because you listened to ${seed.title}`}</h2>
-                          <p>{seed.id === nowSeed?.id ? `Same language and vibe as ${seed.artist}.` : "Picked on this device from what you finish and love."}</p>
+                      <div className="recommendation-header">
+                        <div className="recommendation-title-group">
+                          <div className="recommendation-icon-wrap" aria-hidden="true">
+                            {sIdx % 2 === 0 ? <AudioLines size={22} className="rec-header-icon" /> : <Headphones size={22} className="rec-header-icon" />}
+                          </div>
+                          <div>
+                            <h2 className="recommendation-heading">
+                              Because you listened to <span className="highlight-song">{seed.title}</span>
+                            </h2>
+                            <p className="recommendation-subtitle">Picked on this device from what you finish and love.</p>
+                          </div>
                         </div>
-                        <button className="text-button" onClick={() => play(tracks[0], tracks)}>
-                          Play all <Play size={14} fill="currentColor" />
-                        </button>
+                        <div className="recommendation-actions">
+                          <button className="rec-play-all-btn" onClick={() => play(tracks[0], tracks)}>
+                            <span>Play all</span>
+                            <Play size={13} fill="currentColor" />
+                          </button>
+                          <div className="rec-nav-arrows">
+                            <button
+                              type="button"
+                              className="rec-arrow-btn"
+                              onClick={() => scrollShelf(seed.id, -1)}
+                              aria-label="Previous tracks"
+                              title="Previous tracks"
+                            >
+                              <ChevronLeft size={16} />
+                            </button>
+                            <button
+                              type="button"
+                              className="rec-arrow-btn"
+                              onClick={() => scrollShelf(seed.id, 1)}
+                              aria-label="Next tracks"
+                              title="Next tracks"
+                            >
+                              <ChevronRight size={16} />
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                      <div className="shelf">
-                        {tracks.map((track, i) => (
-                          <Motion.button key={track.id} variants={revealCard} className="album-card" {...intent(track)} onClick={() => play(track, tracks.slice(i))}>
-                            <div className="album-image spotlight">
-                              <Cover track={track} />
-                              <span className="album-play">
-                                <Play size={21} fill="currentColor" />
-                              </span>
-                            </div>
-                            <strong>{track.title}</strong>
-                            <span>{track.artist}</span>
-                          </Motion.button>
-                        ))}
+                      <div
+                        className="shelf"
+                        ref={(el) => {
+                          if (el) shelfRefs.current[seed.id] = el;
+                        }}
+                      >
+                        {tracks.map((track, i) => {
+                          const isFav = favorites.some((t) => t.id === track.id);
+                          const isCurrent = player.track?.id === track.id;
+                          return (
+                            <Motion.div
+                              key={track.id}
+                              variants={revealCard}
+                              className={`album-card ${isCurrent ? "is-playing-card" : ""}`}
+                              {...intent(track)}
+                              onClick={() => play(track, tracks.slice(i))}
+                              role="button"
+                              tabIndex={0}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                  e.preventDefault();
+                                  play(track, tracks.slice(i));
+                                }
+                              }}
+                            >
+                              <div className="album-image spotlight">
+                                <Cover track={track} />
+                                <button
+                                  type="button"
+                                  className={`card-heart-btn ${isFav ? "is-liked" : ""}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleFavorite(track);
+                                  }}
+                                  aria-label={isFav ? "Unlike" : "Like"}
+                                  title={isFav ? "Remove from Liked Songs" : "Add to Liked Songs"}
+                                >
+                                  <Heart
+                                    size={14}
+                                    fill={isFav ? "#d97736" : "none"}
+                                    color={isFav ? "#d97736" : "#ffffff"}
+                                  />
+                                </button>
+                                <span className={`album-play ${isCurrent && player.playing ? "playing" : ""}`}>
+                                  {isCurrent && player.playing ? (
+                                    <Pause size={17} fill="#d97736" color="#d97736" />
+                                  ) : (
+                                    <Play size={17} fill="#d97736" color="#d97736" />
+                                  )}
+                                </span>
+                              </div>
+                              <strong title={track.title}>{track.title}</strong>
+                              <span title={track.artist}>{track.artist}</span>
+                              <div className="card-waveform" aria-hidden="true">
+                                <span style={{ height: "4px" }} />
+                                <span style={{ height: "7px" }} />
+                                <span style={{ height: "13px" }} />
+                                <span style={{ height: "6px" }} />
+                                <span style={{ height: "11px" }} />
+                                <span style={{ height: "15px" }} />
+                                <span style={{ height: "8px" }} />
+                                <span style={{ height: "14px" }} />
+                                <span style={{ height: "5px" }} />
+                                <span style={{ height: "10px" }} />
+                                <span style={{ height: "12px" }} />
+                                <span style={{ height: "7px" }} />
+                                <span style={{ height: "9px" }} />
+                                <span style={{ height: "4px" }} />
+                              </div>
+                            </Motion.div>
+                          );
+                        })}
                       </div>
                     </RevealSection>
                   ))}
