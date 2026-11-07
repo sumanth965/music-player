@@ -459,3 +459,55 @@ test('the tempo change goes to the song where it is least heard', async () => {
   assert.equal(chooseBend({ ...base, introSpan: Infinity, outroSpan: Infinity }), 'incoming', 'unknown: leave the song being heard alone');
   assert.equal(chooseBend({ ...base, introSpan: 1, outroSpan: Infinity }), 'split');
 });
+
+test('musical key parsing and harmonic Camelot wheel compatibility', async () => {
+  const { parseKeyToCamelot, evaluateKeyCompatibility } = await import('./dj.js');
+  
+  assert.deepEqual(parseKeyToCamelot('C Major'), { number: 8, mode: 'B', code: '8B' });
+  assert.deepEqual(parseKeyToCamelot('A Minor'), { number: 8, mode: 'A', code: '8A' });
+  assert.deepEqual(parseKeyToCamelot('11b'), { number: 11, mode: 'B', code: '11B' });
+  assert.equal(parseKeyToCamelot('InvalidKey'), null);
+
+  // Exact match
+  const exact = evaluateKeyCompatibility('C Major', '8B');
+  assert.equal(exact.score, 100);
+  assert.equal(exact.distance, 0);
+
+  // Relative Major/Minor
+  const relative = evaluateKeyCompatibility('C Major', 'A Minor');
+  assert.equal(relative.score, 92);
+  assert.equal(relative.distance, 0);
+
+  // Adjacent key
+  const adjacent = evaluateKeyCompatibility('8B', '9B');
+  assert.equal(adjacent.score, 88);
+  assert.equal(adjacent.distance, 1);
+
+  // Distant clash
+  const clash = evaluateKeyCompatibility('8B', '2B');
+  assert.ok(clash.score < 50);
+});
+
+test('comprehensive track compatibility scoring provides realistic grades and explanations', async () => {
+  const { evaluateTrackCompatibility } = await import('./dj.js');
+
+  // Flawless match: close tempo, relative harmonic key, clean vocal margins, matched energy
+  const flawless = evaluateTrackCompatibility({
+    outgoing: { bpm: 124, key: '8B', outroSpan: 10, exitLevel: 0.8 },
+    incoming: { bpm: 126, key: '8A', introSpan: 12, introLevel: 0.82 },
+    blendSeconds: 8
+  });
+  assert.ok(flawless.score >= 90, `Expected score >= 90, got ${flawless.score}`);
+  assert.equal(flawless.grade, 'S');
+  assert.ok(flawless.tempo.matched);
+  assert.ok(flawless.reasons.length >= 3);
+
+  // Divergent match: large tempo delta (> 16%)
+  const divergent = evaluateTrackCompatibility({
+    outgoing: { bpm: 90, key: '8B' },
+    incoming: { bpm: 140, key: '2B' }
+  });
+  assert.ok(divergent.score < 55, `Expected score < 55, got ${divergent.score}`);
+  assert.ok(['C', 'D'].includes(divergent.grade));
+  assert.equal(divergent.tempo.matched, false);
+});

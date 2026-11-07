@@ -581,7 +581,7 @@ function Seek({ player }) {
   const zone = player.djEnabled ? player.djWindow : null;
   const peaks = usePeaks(player);
   const zoneLabel = zone
-    ? `DJ transition from ${formatTime(zone.start)} to ${formatTime(zone.end)}${zone.ready ? ", next track ready" : ""}`
+    ? `DJ transition from ${formatTime(zone.start)} to ${formatTime(zone.end)}${zone.ready ? ", next track ready" : ""}${zone.compatibility ? ` · Grade ${zone.compatibility.grade} (${zone.compatibility.score}%)` : ""}`
     : undefined;
   // Only a held pointer previews; a tap, click or key seeks at once. Touch can
   // deliver pointerup before the value changes, and a drag can end off the rail,
@@ -1652,6 +1652,11 @@ function DjStatus({ player }) {
               ? "Local audio · tempo glide, warm bass swap and echo"
               : "Online playback · two-deck volume blend"}
         </p>
+        {player.djWindow?.compatibility && (
+          <p className="dj-compat" title={player.djWindow.compatibility.reasons?.join(" • ")}>
+            Transition Match: <strong>Grade {player.djWindow.compatibility.grade}</strong> ({player.djWindow.compatibility.score}%)
+          </p>
+        )}
         <AnimatePresence initial={false}>
           {effects.length > 0 && (
             <Motion.span key="effects" {...unfold} className="dj-effects">
@@ -3685,6 +3690,7 @@ export default function App() {
           )}
           </AnimatePresence>
         </Motion.main>
+        {!immersive && !focused && <div className="swar-bottom-scrim" aria-hidden="true" />}
         <AnimatePresence>
         <Motion.div
           key="dock"

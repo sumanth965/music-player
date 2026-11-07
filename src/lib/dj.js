@@ -450,3 +450,183 @@ export function vocalSpans({ duration, outLines = [], inLines = [], entry = 0 })
     introSpan: Number.isFinite(firstVocal) && firstVocal > entry ? Math.round((firstVocal - entry) * 1000) / 1000 : Infinity,
   };
 }
+
+// Camelot Wheel musical key mappings (Circle of Fifths representation)
+const CAMELOT_MAP = {
+  // Major keys (B mode)
+  'b': '1B', 'b major': '1B', 'cb': '1B', 'cb major': '1B',
+  'f#': '2B', 'f# major': '2B', 'gb': '2B', 'gb major': '2B',
+  'c#': '3B', 'c# major': '3B', 'db': '3B', 'db major': '3B',
+  'g#': '4B', 'g# major': '4B', 'ab': '4B', 'ab major': '4B',
+  'd#': '5B', 'd# major': '5B', 'eb': '5B', 'eb major': '5B',
+  'a#': '6B', 'a# major': '6B', 'bb': '6B', 'bb major': '6B',
+  'f': '7B', 'f major': '7B',
+  'c': '8B', 'c major': '8B',
+  'g': '9B', 'g major': '9B',
+  'd': '10B', 'd major': '10B',
+  'a': '11B', 'a major': '11B',
+  'e': '12B', 'e major': '12B',
+  // Minor keys (A mode)
+  'g#m': '1A', 'g# minor': '1A', 'abm': '1A', 'ab minor': '1A',
+  'd#m': '2A', 'd# minor': '2A', 'ebm': '2A', 'eb minor': '2A',
+  'a#m': '3A', 'a# minor': '3A', 'bbm': '3A', 'bb minor': '3A',
+  'fm': '4A', 'f minor': '4A',
+  'cm': '5A', 'c minor': '5A',
+  'gm': '6A', 'g minor': '6A',
+  'dm': '7A', 'd minor': '7A',
+  'am': '8A', 'a minor': '8A',
+  'em': '9A', 'e minor': '9A',
+  'bm': '10A', 'b minor': '10A',
+  'f#m': '11A', 'f# minor': '11A',
+  'c#m': '12A', 'c# minor': '12A', 'dbm': '12A', 'db minor': '12A',
+};
+
+export function parseKeyToCamelot(rawKey) {
+  if (!rawKey || typeof rawKey !== 'string') return null;
+  const clean = rawKey.trim().toLowerCase().replace(/\s+/g, ' ');
+  const camelotMatch = clean.toUpperCase().match(/^([1-9]|1[0-2])([AB])$/);
+  if (camelotMatch) return { number: parseInt(camelotMatch[1], 10), mode: camelotMatch[2], code: `${camelotMatch[1]}${camelotMatch[2]}` };
+  const mapped = CAMELOT_MAP[clean];
+  if (!mapped) return null;
+  const match = mapped.match(/^(\d+)([AB])$/);
+  return { number: parseInt(match[1], 10), mode: match[2], code: mapped };
+}
+
+export function evaluateKeyCompatibility(keyA, keyB) {
+  const cA = parseKeyToCamelot(keyA);
+  const cB = parseKeyToCamelot(keyB);
+  if (!cA || !cB) return null;
+  const clockDiff = Math.abs(cA.number - cB.number);
+  const distance = Math.min(clockDiff, 12 - clockDiff);
+  const sameMode = cA.mode === cB.mode;
+
+  if (sameMode && distance === 0) {
+    return { score: 100, relationship: 'Exact key match (harmonic unison)', distance, camelotA: cA.code, camelotB: cB.code };
+  }
+  if (!sameMode && distance === 0) {
+    return { score: 92, relationship: 'Relative Major/Minor modulation', distance, camelotA: cA.code, camelotB: cB.code };
+  }
+  if (sameMode && distance === 1) {
+    return { score: 88, relationship: 'Adjacent key modulation (4th / 5th)', distance, camelotA: cA.code, camelotB: cB.code };
+  }
+  if (!sameMode && distance === 1) {
+    return { score: 78, relationship: 'Diagonal key modulation (Energetic harmonic shift)', distance, camelotA: cA.code, camelotB: cB.code };
+  }
+  if (sameMode && distance === 2) {
+    return { score: 62, relationship: 'Two-step whole-tone key modulation', distance, camelotA: cA.code, camelotB: cB.code };
+  }
+  const penalty = distance * 12 + (sameMode ? 0 : 8);
+  return {
+    score: Math.max(15, Math.round(70 - penalty)),
+    relationship: 'Distant harmonic key (potential dissonance)',
+    distance,
+    camelotA: cA.code,
+    camelotB: cB.code
+  };
+}
+
+export function evaluateTrackCompatibility({ outgoing = {}, incoming = {}, blendSeconds = 8 } = {}) {
+  const reasons = [];
+  let tempoScore = 70;
+  let tempoDetail = { matched: false, deltaPercent: 0, sharedBpm: null };
+
+  const outBpm = Number(outgoing.bpm);
+  const inBpm = Number(incoming.bpm);
+  const hasTempo = outBpm > 0 && inBpm > 0;
+
+  if (hasTempo) {
+    const targetBpm = octaveTarget(outBpm, inBpm);
+    const ratio = targetBpm / outBpm;
+    const deltaPercent = Math.round(Math.abs(ratio - 1) * 1000) / 10;
+    const matched = deltaPercent <= 16;
+    tempoDetail = {
+      matched,
+      deltaPercent,
+      targetBpm,
+      ratio,
+      sharedBpm: matched ? (deltaPercent <= 4 ? targetBpm : Math.round(outBpm * Math.sqrt(ratio) * 10) / 10) : null
+    };
+
+    if (deltaPercent <= 1) {
+      tempoScore = 100;
+      reasons.push(`Tempos are naturally aligned (${outBpm} vs ${inBpm} BPM, ${deltaPercent}% delta)`);
+    } else if (deltaPercent <= 4) {
+      tempoScore = Math.round(92 - (deltaPercent - 1) * 3);
+      reasons.push(`Clean single-deck tempo stretch (${deltaPercent}% shift to ${targetBpm} BPM)`);
+    } else if (deltaPercent <= 8) {
+      tempoScore = Math.round(82 - (deltaPercent - 4) * 3);
+      reasons.push(`Moderate tempo stretch (${deltaPercent}% shift within single deck bound)`);
+    } else if (deltaPercent <= 16) {
+      tempoScore = Math.round(65 - (deltaPercent - 8) * 2);
+      reasons.push(`Split tempo glide across both decks (${deltaPercent}% total delta, shared beat)`);
+    } else {
+      tempoScore = Math.max(15, Math.round(40 - (deltaPercent - 16)));
+      reasons.push(`Tempos diverge (${outBpm} vs ${inBpm} BPM, ${deltaPercent}% delta; cut or unquantized fade needed)`);
+    }
+  } else {
+    reasons.push('Catalogue BPM unmeasured on one or both tracks (equal-power acoustic crossfade)');
+  }
+
+  const keyMatch = evaluateKeyCompatibility(outgoing.key, incoming.key);
+  if (keyMatch) {
+    reasons.push(`${keyMatch.relationship}: ${keyMatch.camelotA} → ${keyMatch.camelotB}`);
+  }
+
+  let vocalScore = 80;
+  const outroSpan = Number(outgoing.outroSpan);
+  const introSpan = Number(incoming.introSpan);
+  const hasVocalData = Number.isFinite(outroSpan) && Number.isFinite(introSpan);
+
+  if (hasVocalData) {
+    if (outroSpan >= blendSeconds * 0.7 && introSpan >= blendSeconds * 0.7) {
+      vocalScore = 100;
+      reasons.push(`Clean vocal separation: ${Math.round(outroSpan)}s outro into ${Math.round(introSpan)}s intro (zero vocal clash)`);
+    } else if (outroSpan >= 4 || introSpan >= 4) {
+      vocalScore = 85;
+      reasons.push(`Asymmetric vocal spacing (${Math.round(outroSpan)}s outro / ${Math.round(introSpan)}s intro; clean handoff)`);
+    } else {
+      vocalScore = 55;
+      reasons.push('Tight vocal margins on both tracks (automatic vocal EQ ducking active)');
+    }
+  }
+
+  let energyScore = 80;
+  const exitLvl = Number(outgoing.exitLevel);
+  const introLvl = Number(incoming.introLevel);
+  if (exitLvl > 0 && introLvl > 0) {
+    const energyRatio = Math.max(exitLvl, introLvl) / Math.min(exitLvl, introLvl);
+    if (energyRatio <= 1.25) {
+      energyScore = 95;
+      reasons.push('Loudness and energy are closely matched across transition point');
+    } else if (energyRatio <= 1.6) {
+      energyScore = 80;
+      reasons.push('Moderate energy transition between tracks');
+    } else {
+      energyScore = 60;
+      reasons.push('Noticeable energy dynamic shift between outgoing and incoming sections');
+    }
+  }
+
+  let totalScore;
+  if (keyMatch) {
+    totalScore = tempoScore * 0.40 + keyMatch.score * 0.30 + vocalScore * 0.18 + energyScore * 0.12;
+  } else {
+    totalScore = tempoScore * 0.55 + vocalScore * 0.27 + energyScore * 0.18;
+  }
+
+  const roundedScore = Math.min(100, Math.max(10, Math.round(totalScore)));
+  let grade = 'C';
+  if (roundedScore >= 90) grade = 'S';
+  else if (roundedScore >= 80) grade = 'A';
+  else if (roundedScore >= 68) grade = 'B';
+  else if (roundedScore >= 50) grade = 'C';
+  else grade = 'D';
+
+  return {
+    score: roundedScore,
+    grade,
+    tempo: tempoDetail,
+    harmonic: keyMatch,
+    reasons
+  };
+}

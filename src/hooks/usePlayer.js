@@ -6,7 +6,7 @@ import { buildApiUrl } from '../lib/api';
 import { fetchWithRetry } from '../lib/fetch-retry';
 import { getSimilarTracks, getTrackAnalysis, getTrackTempo } from '../lib/catalog';
 import { pickSeed, recordListening, tasteFilter } from '../lib/listening';
-import { MAX_BLEND, MIN_BLEND, ONLINE_MAX_BLEND, swapTime, adaptiveBlend, analyzeLocalTempo, beatAlignedEntry, blendCurve, vocalSpans, chooseEntry, equalPower, chooseBend, glideRate, gridRate, nudgePlan, phaseOffset, planOnlineCue, planOnlineEntry, planTransition, quantizeRate, recoverRate, smoothstep } from '../lib/dj';
+import { MAX_BLEND, MIN_BLEND, ONLINE_MAX_BLEND, swapTime, adaptiveBlend, analyzeLocalTempo, beatAlignedEntry, blendCurve, vocalSpans, chooseEntry, equalPower, chooseBend, glideRate, gridRate, nudgePlan, phaseOffset, planOnlineCue, planOnlineEntry, planTransition, quantizeRate, recoverRate, smoothstep, evaluateTrackCompatibility } from '../lib/dj';
 import { playSweep } from '../lib/sweep';
 import { nextPlayable } from '../lib/queue';
 import { detectLanguage } from '../../shared/language.js';
@@ -1443,7 +1443,12 @@ export function usePlayer() {
       const standby = decks.current.find(deck => deck.element !== element);
       if (standby && standby.element.src !== selected.localUrl) { standby.element.preload = 'auto'; standby.element.src = selected.localUrl; standby.element.load(); }
       const ready = Boolean(standby?.element.readyState >= 3);
-      const window = { start: Math.max(0, plan.rampSeconds ? rampStart : start), end: Math.min(element.duration, start + plan.seconds), seconds: plan.seconds, mode: 'local', ready, glide: plan.rampSeconds > 0 };
+      const compatibility = evaluateTrackCompatibility({
+        outgoing: { bpm: from?.outro?.bpm, key: state.track?.key, exitLevel: from?.exitLevel, outroSpan: from ? from.duration - from.mixStart : undefined },
+        incoming: { bpm: analysis.current.get(selected.id)?.intro?.bpm, key: selected.key, introLevel: analysis.current.get(selected.id)?.introStart, introSpan: analysis.current.get(selected.id)?.introStart },
+        blendSeconds: plan.seconds,
+      });
+      const window = { start: Math.max(0, plan.rampSeconds ? rampStart : start), end: Math.min(element.duration, start + plan.seconds), seconds: plan.seconds, mode: 'local', ready, glide: plan.rampSeconds > 0, compatibility };
       setDjWindow(previous => JSON.stringify(previous) === JSON.stringify(window) ? previous : window);
       if (attemptedMix.current === key || element.duration <= 12) return;
       // Song A glides into song B's tempo before the overlap, so the blend starts beat-matched.
@@ -1502,7 +1507,12 @@ export function usePlayer() {
     // postponed cue keeps its glide and holds the matched tempo while it waits.
     const rampStart = Math.max(cue.from ?? -Infinity, (cue.rampEnd ?? cue.start) - plan.rampSeconds);
     const rampLength = Math.max(0, (cue.rampEnd ?? cue.start) - rampStart);
-    const window = { start: rampLength ? rampStart : cue.start, end: cue.end, seconds: cue.seconds, mode: 'online', ready: blend?.stage === 'primed', glide: rampLength > 0 };
+    const compatibility = evaluateTrackCompatibility({
+      outgoing: { bpm: tempoA, key: state.track?.key, outroSpan: spans.outroSpan },
+      incoming: { bpm: tempoB, key: selected.key, introSpan: spans.introSpan },
+      blendSeconds: plan.seconds,
+    });
+    const window = { start: rampLength ? rampStart : cue.start, end: cue.end, seconds: cue.seconds, mode: 'online', ready: blend?.stage === 'primed', glide: rampLength > 0, compatibility };
     if (dj) setDjWindow(previous => JSON.stringify(previous) === JSON.stringify(window) ? previous : window);
     if (length <= 20) return;
     const primeFrom = cue.source === 'late' ? cue.from : Math.min(cue.start - 2, Math.max(6, cue.start - PRIME_LEAD));
@@ -1633,6 +1643,25 @@ export function usePlayer() {
     const timer = playing ? setInterval(update, 1000) : null;
     return () => clearInterval(timer);
   }, [track, playing, duration, clock]);
+
+  // Audio hardware changes (Bluetooth disconnection, headphone unplug, USB DAC reconnect)
+  useEffect(() => {
+    const handleDeviceChange = () => {
+      if (context.current && context.current.state !== 'closed') {
+        if (preferences.current.surround) {
+          const destination = context.current.destination;
+          destination.channelCount = Math.max(2, destination.maxChannelCount);
+        }
+        if (context.current.state === 'suspended' && current.current.playing) {
+          void context.current.resume().catch(() => {});
+        }
+      }
+    };
+    if (typeof navigator !== 'undefined' && navigator.mediaDevices?.addEventListener) {
+      navigator.mediaDevices.addEventListener('devicechange', handleDeviceChange);
+      return () => navigator.mediaDevices.removeEventListener('devicechange', handleDeviceChange);
+    }
+  }, []);
   // The screen stays on while music plays (released on pause, taken back on return).
   useEffect(() => {
     if (!playing || !('wakeLock' in navigator)) return undefined;

@@ -83,12 +83,47 @@ export function parseEnhancedLrcLine(line, _fallbackStart = 0) {
 }
 
 /**
+ * Generates syllable-proportional word intervals for line-timed lyrics when
+ * genuine word timestamps are not provided by upstream services.
+ * @param {Object} line
+ * @returns {Array<{text: string, start: number, end: number, interpolated: boolean}>}
+ */
+export function interpolateMissingWords(line) {
+  if (!line || !line.text) return [];
+  if (Array.isArray(line.words) && line.words.length > 0) return line.words;
+  const rawWords = line.text.split(/\s+/).filter(Boolean);
+  if (!rawWords.length) return [];
+  const start = Number(line.time) || 0;
+  const end = Number(line.endTime) || (start + 3.5);
+  const totalDuration = Math.max(0.3, end - start);
+  const syllables = rawWords.map((w) => Math.max(1, countSyllables(w)));
+  const totalSyllables = syllables.reduce((a, b) => a + b, 0);
+
+  let currentStart = start;
+  return rawWords.map((word, i) => {
+    const fraction = syllables[i] / totalSyllables;
+    const wordDuration = Math.max(0.1, totalDuration * fraction);
+    const wordEnd = i === rawWords.length - 1 ? end : Math.min(end, currentStart + wordDuration);
+    const result = {
+      text: word,
+      start: Math.round(currentStart * 100) / 100,
+      end: Math.round(wordEnd * 100) / 100,
+      interpolated: true,
+    };
+    currentStart = wordEnd;
+    return result;
+  });
+}
+
+/**
  * Parses word-level lyrics from various schemas (JSON word arrays, LRC, or raw text).
  * Normalizes all lines into consistent LyricLine structures.
  * @param {Object|string} input
+ * @param {Object} [options]
+ * @param {boolean} [options.interpolateWords=false]
  * @returns {Array<Object>}
  */
-export function parseWordLyrics(input) {
+export function parseWordLyrics(input, { interpolateWords = false } = {}) {
   if (!input) return [];
 
   let rawLines = [];
@@ -122,7 +157,7 @@ export function parseWordLyrics(input) {
   } else if (input.lines && Array.isArray(input.lines)) {
     rawLines = input.lines;
   } else if (input.plainLyrics) {
-    return parseWordLyrics(input.plainLyrics);
+    return parseWordLyrics(input.plainLyrics, { interpolateWords });
   }
 
   if (!rawLines.length) return [];
@@ -161,7 +196,9 @@ export function parseWordLyrics(input) {
       endTime,
       text: line.text || '',
       romanized: line.romanized || line.phonetic || null,
-      words: line.words || null,
+      words: (line.words && line.words.length > 0)
+        ? line.words
+        : (interpolateWords ? interpolateMissingWords({ text: line.text, time: line.time, endTime }) : null),
       syllableCount,
       syllablesPerSec,
       isFast,

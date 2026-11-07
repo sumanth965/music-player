@@ -62,3 +62,19 @@ test('getActiveIndices resolves active line and active word', () => {
   assert.equal(during.activeLineIndex, 0);
   assert.equal(during.activeWordIndex, 1);
 });
+
+test('interpolateMissingWords estimates syllable-proportional word intervals for line-timed lyrics', () => {
+  const line = {
+    text: 'Never gonna give you up',
+    time: 10,
+    endTime: 12.5,
+  };
+
+  const parsed = parseWordLyrics([line], { interpolateWords: true });
+  assert.equal(parsed.length, 1);
+  assert.equal(parsed[0].words.length, 5);
+  assert.equal(parsed[0].words[0].text, 'Never');
+  assert.equal(parsed[0].words[0].interpolated, true);
+  assert.equal(parsed[0].words[0].start, 10);
+  assert.ok(parsed[0].words[4].end <= 12.5);
+});
