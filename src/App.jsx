@@ -2920,8 +2920,9 @@ export default function App() {
           <div className="sidebar-brand-row">
             <button
               className="brand-button"
-              onClick={() => navigate("home")}
-              aria-label="Swar home"
+              onClick={() => (sidebarCollapsed ? setSidebarCollapsed(false) : navigate("home"))}
+              aria-label={sidebarCollapsed ? "Expand sidebar" : "Swar home"}
+              title={sidebarCollapsed ? "Expand sidebar" : "Swar home"}
             >
               <Brand />
             </button>
@@ -2942,6 +2943,8 @@ export default function App() {
               <button
                 className={`sidebar-nav-item ${page === "home" && !immersive ? "selected active" : ""}`}
                 onClick={() => navigate("home")}
+                title={sidebarCollapsed ? "Listen Now" : undefined}
+                aria-label="Listen Now"
               >
                 <House size={18} />
                 <span>Listen Now</span>
@@ -2949,6 +2952,8 @@ export default function App() {
               <button
                 className={`sidebar-nav-item ${page === "search" && !immersive ? "selected active" : ""}`}
                 onClick={() => navigate("search")}
+                title={sidebarCollapsed ? "Explore" : undefined}
+                aria-label="Explore"
               >
                 <Compass size={18} />
                 <span>Explore</span>
@@ -2956,6 +2961,8 @@ export default function App() {
               <button
                 className={`sidebar-nav-item ${page === "library" && !immersive ? "selected active" : ""}`}
                 onClick={() => navigate("library")}
+                title={sidebarCollapsed ? "Your Library" : undefined}
+                aria-label="Your Library"
               >
                 <Library size={18} />
                 <span>Your Library</span>
@@ -2973,6 +2980,8 @@ export default function App() {
                   setStudioTab("teleprompter");
                   navigate("studio");
                 }}
+                title={sidebarCollapsed ? "Lyrics & Practice" : undefined}
+                aria-label="Lyrics & Practice"
               >
                 <Music2 size={18} />
                 <span>Lyrics & Practice</span>
@@ -2983,6 +2992,8 @@ export default function App() {
                   setStudioTab("game");
                   navigate("studio");
                 }}
+                title={sidebarCollapsed ? "Sing Along" : undefined}
+                aria-label="Sing Along"
               >
                 <Mic size={18} />
                 <span>Sing Along</span>
@@ -2993,6 +3004,8 @@ export default function App() {
                   setStudioTab("practice");
                   navigate("studio");
                 }}
+                title={sidebarCollapsed ? "Karaoke Mode" : undefined}
+                aria-label="Karaoke Mode"
               >
                 <Tv size={18} />
                 <span>Karaoke Mode</span>
@@ -3007,6 +3020,8 @@ export default function App() {
               <button
                 className="sidebar-nav-item"
                 onClick={() => navigate("library")}
+                title={sidebarCollapsed ? "Liked Songs" : undefined}
+                aria-label="Liked Songs"
               >
                 <Heart size={18} />
                 <span>Liked Songs</span>
@@ -3014,6 +3029,8 @@ export default function App() {
               <button
                 className="sidebar-nav-item"
                 onClick={() => setSheet("queue")}
+                title={sidebarCollapsed ? `Play Queue (${player.queue?.length || 3})` : undefined}
+                aria-label="Play Queue"
               >
                 <ListMusic size={18} />
                 <span>Play Queue</span>
@@ -3022,6 +3039,8 @@ export default function App() {
               <button
                 className="sidebar-nav-item"
                 onClick={() => navigate("library")}
+                title={sidebarCollapsed ? "Recently Played" : undefined}
+                aria-label="Recently Played"
               >
                 <Clock size={18} />
                 <span>Recently Played</span>
@@ -3068,9 +3087,6 @@ export default function App() {
           </div>
         </aside>
         <Motion.main
-          layout="position"
-          layoutDependency={`${sidebarCollapsed}:${focused}`}
-          transition={{ layout: { duration: 0.6, ease: EASE } }}
           className="main-content"
         >
           <AnimatePresence mode="wait" initial={false}>

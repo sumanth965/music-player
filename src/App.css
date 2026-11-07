@@ -273,11 +273,12 @@ svg {
   flex-direction: column;
   background: linear-gradient(180deg, #160F0B 0%, #1e130c 55%, #120a06 100%);
   border-right: 1px solid rgba(242, 138, 50, 0.14);
-  z-index: 20;
+  z-index: 30;
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: none;
-  transition: width 0.4s var(--ease-out), padding 0.4s var(--ease-out);
+  transition: width 0.35s cubic-bezier(0.2, 0, 0, 1), padding 0.35s cubic-bezier(0.2, 0, 0, 1);
+  will-change: width;
 }
 .sidebar::-webkit-scrollbar {
   display: none;
@@ -545,7 +546,8 @@ svg {
   padding-bottom: 160px;
   min-height: 100dvh;
   background: #faf7f2;
-  transition: margin-left 0.4s var(--ease-out);
+  transition: margin-left 0.35s cubic-bezier(0.2, 0, 0, 1);
+  will-change: margin-left;
 }
 .topbar {
   height: 74px;
@@ -1525,10 +1527,10 @@ svg {
   padding: 0 20px;
   color: #ffffff;
   z-index: 40;
-  transition: left 0.4s var(--ease-out), right 0.4s var(--ease-out), bottom 0.3s ease;
+  transition: left 0.35s cubic-bezier(0.2, 0, 0, 1), right 0.35s cubic-bezier(0.2, 0, 0, 1), bottom 0.3s ease;
 }
 .sidebar-collapsed .player-dock.warm-dock {
-  left: 102px;
+  left: 96px;
 }
 
 /* Ambient Bottom Scrim for Floating Player Dock */
@@ -1547,7 +1549,7 @@ svg {
   );
   pointer-events: none;
   z-index: 38;
-  transition: left 0.4s var(--ease-out);
+  transition: left 0.35s cubic-bezier(0.2, 0, 0, 1);
 }
 .swar-app.dark-theme .swar-bottom-scrim {
   background: linear-gradient(
@@ -1559,7 +1561,7 @@ svg {
   );
 }
 .sidebar-collapsed .swar-bottom-scrim {
-  left: 82px;
+  left: 76px;
 }
 @media (max-width: 900px) {
   .swar-bottom-scrim {
@@ -3766,46 +3768,124 @@ button:focus:not(:focus-visible) {
     min-width: 90px;
   }
   .sidebar-collapsed .sidebar {
-    width: 82px;
-    padding-inline: 12px;
+    width: 76px;
+    padding: 20px 10px 24px 10px;
+    overflow-x: hidden;
   }
   .sidebar-collapsed .main-content {
-    margin-left: 82px;
+    margin-left: 76px;
+  }
+  .sidebar-collapsed .sidebar-brand-row {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 0;
+    margin-bottom: 18px;
+  }
+  .sidebar-collapsed .brand-button {
+    padding: 0;
+    margin: 0 auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
   }
   .sidebar-collapsed .sidebar .brand {
-    font-size: 0;
     gap: 0;
+    font-size: 0;
     letter-spacing: 0;
   }
-  .sidebar-collapsed .sidebar .brand-period,
-  .sidebar-collapsed .sidebar nav span,
-  .sidebar-collapsed .sidebar kbd,
-  .sidebar-collapsed .sidebar-label,
-  .sidebar-collapsed .sidebar-section-title,
-  .sidebar-collapsed .sidebar-badge,
-  .sidebar-collapsed .sidebar-wave-art,
-  .sidebar-collapsed .collection-link > span:last-child,
-  .sidebar-collapsed .sidebar-bottom span {
-    display: none;
+  .sidebar-collapsed .sidebar .brand-mark {
+    margin-right: 0;
+  }
+  .sidebar-collapsed .sidebar .brand-word,
+  .sidebar-collapsed .sidebar .brand-period {
+    display: none !important;
+  }
+  .sidebar-collapsed .sidebar-toggle-btn {
+    width: 36px;
+    height: 36px;
+    margin: 0 auto;
+    border-radius: 10px;
+    background: rgba(242, 138, 50, 0.1);
+    border-color: rgba(242, 138, 50, 0.3);
+    color: #FFAA52;
+  }
+  .sidebar-collapsed .sidebar-toggle-btn:hover {
+    background: rgba(242, 138, 50, 0.22);
+    border-color: #F28A32;
+    transform: scale(1.05);
+  }
+  .sidebar-collapsed .sidebar-section {
+    margin-top: 14px;
+  }
+  .sidebar-collapsed .sidebar-section-title {
+    font-size: 0;
+    height: 1px;
+    max-height: 1px;
+    margin: 12px 6px 10px 6px;
+    padding: 0;
+    background: rgba(242, 138, 50, 0.14);
+    overflow: hidden;
+    border: none;
+  }
+  .sidebar-collapsed .sidebar-nav-list {
+    gap: 8px;
+    align-items: center;
   }
   .sidebar-collapsed .sidebar-nav-item,
   .sidebar-collapsed .sidebar nav button {
-    justify-content: center;
+    width: 48px;
+    height: 44px;
     padding: 0;
+    margin: 0 auto;
+    justify-content: center;
+    border-radius: 12px;
+    gap: 0;
+  }
+  .sidebar-collapsed .sidebar-nav-item span:not(.sidebar-badge),
+  .sidebar-collapsed .sidebar nav button span:not(.sidebar-badge),
+  .sidebar-collapsed .sidebar kbd,
+  .sidebar-collapsed .sidebar-label,
+  .sidebar-collapsed .collection-link > span:last-child,
+  .sidebar-collapsed .sidebar-bottom span {
+    display: none !important;
+  }
+  .sidebar-collapsed .sidebar-nav-item svg,
+  .sidebar-collapsed .sidebar nav button svg {
+    margin: 0 auto;
+    width: 19px;
+    height: 19px;
+    flex-shrink: 0;
   }
   .sidebar-collapsed .sidebar-nav-item.selected::before,
-  .sidebar-collapsed .sidebar-nav-item.active::before {
-    left: -12px;
+  .sidebar-collapsed .sidebar-nav-item.active::before,
+  .sidebar-collapsed .sidebar nav button.selected::before,
+  .sidebar-collapsed .sidebar nav button.active::before {
+    left: -14px;
+    width: 3.5px;
+    height: 22px;
+    border-radius: 0 4px 4px 0;
   }
-  .sidebar-collapsed .brand-button {
-    padding-inline: 15px;
+  .sidebar-collapsed .sidebar-badge {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    min-width: 16px;
+    height: 16px;
+    font-size: 9.5px;
+    font-weight: 800;
+    padding: 0 3px;
+    margin-left: 0;
+    border: 1.5px solid #160F0B;
+    box-shadow: 0 0 6px rgba(242, 138, 50, 0.5);
   }
-  .sidebar-collapsed .collection-link {
-    padding-inline: 11px;
+  .sidebar-collapsed .sidebar-wave-art {
+    opacity: 0.25;
   }
   .sidebar-collapsed .is-immersive .player-dock,
   .sidebar-collapsed.is-immersive .player-dock {
-    left: 104px;
+    left: 96px;
   }
 }
 @media (min-width: 761px) and (max-width: 1050px) {
@@ -5562,54 +5642,7 @@ html.scroll-locked {
   user-select: none;
 }
 
-/* ── Sidebar: collapse and expand ───────────────────────────────────────────
-   The rail's width glides; labels fade and slide out quickly, then back in a
-   beat after the rail has opened. Main content slides into place unscaled, and
-   the player dock follows the same curve. */
-@media (min-width: 761px) {
-  .sidebar {
-    overflow: hidden;
-    transition:
-      width 0.6s var(--ease-soft),
-      padding 0.6s var(--ease-soft);
-  }
-  .sidebar .brand-word,
-  .sidebar nav span,
-  .sidebar kbd,
-  .sidebar-label,
-  .collection-link > span:last-child,
-  .sidebar-bottom span {
-    white-space: nowrap;
-    transition:
-      opacity 0.4s var(--ease-soft) 0.16s,
-      translate 0.5s var(--ease-soft) 0.12s;
-  }
-  .sidebar-collapsed .sidebar .brand-word,
-  .sidebar-collapsed .sidebar nav span,
-  .sidebar-collapsed .sidebar kbd,
-  .sidebar-collapsed .sidebar-label,
-  .sidebar-collapsed .collection-link > span:last-child,
-  .sidebar-collapsed .sidebar-bottom span {
-    display: inline;
-    opacity: 0;
-    translate: -8px 0;
-    pointer-events: none;
-    transition:
-      opacity 0.18s ease,
-      translate 0.3s var(--ease-soft);
-  }
-  .sidebar-collapsed .sidebar .brand {
-    font-size: 30px;
-    gap: 10px;
-    letter-spacing: -1.4px;
-  }
-  .sidebar-collapsed .sidebar-label {
-    display: block;
-  }
-  .player-dock {
-    transition: left 0.6s var(--ease-soft);
-  }
-}
+
 @media (prefers-reduced-motion: reduce) {
   .sidebar,
   .player-dock {
