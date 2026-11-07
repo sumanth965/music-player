@@ -1,4 +1,5 @@
 import { MOODS, fetchMood } from './_lib/moods.js';
+import { FALLBACK_MOOD_TRACKS } from '../shared/mood-fallbacks.js';
 
 const cache = new Map();
 
@@ -13,11 +14,12 @@ export default async function handler(req, res) {
   if (cached?.until > Date.now()) return res.json({ tracks: cached.tracks });
   try {
     const tracks = await fetchMood(mood, { lang: lang || null });
+    const finalTracks = Array.isArray(tracks) && tracks.length >= 4 ? tracks : (FALLBACK_MOOD_TRACKS[mood] || []);
     if (cache.size >= 100) cache.delete(cache.keys().next().value);
-    cache.set(key, { tracks, until: Date.now() + 3_600_000 });
-    return res.json({ tracks });
+    cache.set(key, { tracks: finalTracks, until: Date.now() + 3_600_000 });
+    return res.json({ tracks: finalTracks });
   } catch {
-    res.setHeader('Cache-Control', 'no-store');
-    return res.status(503).json({ error: 'Moods are temporarily unavailable.' });
+    const fallback = (FALLBACK_MOOD_TRACKS[mood] || []).map(t => ({ ...t, mood }));
+    return res.json({ tracks: fallback });
   }
 }

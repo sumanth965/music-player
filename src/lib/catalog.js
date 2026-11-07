@@ -1,5 +1,6 @@
 import { rankForTaste } from './listening';
 import { buildApiUrl } from './api.js';
+import { FALLBACK_MOOD_TRACKS } from '../../shared/mood-fallbacks.js';
 
 export function normalizeTrack(item) {
   return { id: String(item.id || item.trackId), title: item.title || item.trackName || 'Untitled', artist: item.artist || item.artistName || 'Unknown artist', album: item.album || item.collectionName || '', artwork: (item.artwork || item.artworkUrl100 || '').replace(/100x100bb/, '600x600bb'), duration: item.duration ?? (item.trackTimeMillis || 0) / 1000, previewUrl: item.previewUrl, videoId: item.videoId, source: item.source, localUrl: item.localUrl, artistId: item.artistId, genre: item.genre || item.primaryGenreName, recommended: item.recommended === true, recommendationReason: item.recommendationReason, lyrics: item.lyrics || null };
@@ -248,12 +249,24 @@ export async function getMoodTracks(mood, signal, { lang } = {}) {
   const key = `${mood}:${lang || ''}`;
   if (!moodCache.has(key)) {
     const params = lang ? { mood, lang } : { mood };
-    const response = await fetch(buildApiUrl('/api/mood', params), { signal });
-    if (!response.ok) throw new Error('This mood is unavailable right now.');
-    const data = await response.json();
-    remember(moodCache, key, (Array.isArray(data.tracks) ? data.tracks : []).filter(item => item?.id && item.title && item.artist).map(normalizeTrack));
+    try {
+      const response = await fetch(buildApiUrl('/api/mood', params), { signal });
+      if (!response.ok) throw new Error('Failed to fetch mood');
+      const data = await response.json();
+      const tracks = (Array.isArray(data.tracks) ? data.tracks : []).filter(item => item?.id && item.title && item.artist).map(normalizeTrack);
+      if (tracks.length >= 4) {
+        remember(moodCache, key, tracks);
+      } else {
+        const fallback = (FALLBACK_MOOD_TRACKS[mood] || []).map(normalizeTrack);
+        remember(moodCache, key, fallback.length > 0 ? fallback : tracks);
+      }
+    } catch (err) {
+      if (err.name === 'AbortError') throw err;
+      const fallback = (FALLBACK_MOOD_TRACKS[mood] || []).map(normalizeTrack);
+      remember(moodCache, key, fallback);
+    }
   }
-  return rankForTaste(moodCache.get(key));
+  return rankForTaste(moodCache.get(key) || []);
 }
 
 // Catalogue tempo for online DJ blends; null when the catalogue does not know it.

@@ -1,4 +1,4 @@
-import React, { Fragment, memo, useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
+import React, { Fragment, forwardRef, memo, useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import {
   AnimatePresence,
   MotionConfig,
@@ -358,15 +358,16 @@ function PlayButton({ player, large = false }) {
 // The reveal is driven by state rather than whileInView: cards that arrive after
 // the section has come into view (recommendations load late) then inherit "shown"
 // and cascade in, instead of staying hidden.
-function RevealSection(props) {
-  const ref = useRef(null);
+const RevealSection = forwardRef(function RevealSection(props, forwardedRef) {
+  const localRef = useRef(null);
+  const ref = forwardedRef || localRef;
   const inView = useInView(ref, revealSection.viewport);
   return (
     <AnimatePresence>
       <Motion.section ref={ref} variants={revealSection.variants} initial="hidden" animate={inView ? "shown" : "hidden"} {...props} />
     </AnimatePresence>
   );
-}
+});
 
 // A small waveform loader: five bars rise and fall in sequence (transform only).
 function Waveform() {
@@ -1702,6 +1703,34 @@ export default function App() {
   const [starterPicks, setStarterPicks] = useState([]);
   const [mood, setMood] = useState(null);
   const [moodResult, setMoodResult] = useState({ mood: null, tracks: [] });
+  const moodSectionRef = useRef(null);
+  const pendingMoodScrollRef = useRef(null);
+
+  const scrollToMood = useCallback(() => {
+    requestAnimationFrame(() => {
+      const el = moodSectionRef.current || document.getElementById("mood-results-section");
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
+  }, []);
+
+  const handleMoodClick = useCallback(
+    (item) => {
+      if (mood === item.id) {
+        setMood(null);
+        pendingMoodScrollRef.current = null;
+      } else {
+        setMood(item.id);
+        if (moodResult.mood === item.id && moodResult.tracks.length > 0) {
+          setTimeout(scrollToMood, 60);
+        } else {
+          pendingMoodScrollRef.current = item.id;
+        }
+      }
+    },
+    [mood, moodResult, scrollToMood]
+  );
   const [_catalogError, setCatalogError] = useState("");
   const [query, setQuery] = useState("");
   const [forYouRows, setForYou] = useState([]);
@@ -1944,10 +1973,20 @@ export default function App() {
       .catch((error) => {
         if (error.name === "AbortError") return;
         setMoodResult({ mood, tracks: [] });
-        setNotice("That mood is unavailable right now.");
       });
     return () => controller.abort();
   }, [mood, listeningLang]);
+
+  useEffect(() => {
+    if (
+      pendingMoodScrollRef.current &&
+      moodResult.mood === pendingMoodScrollRef.current &&
+      moodResult.tracks.length > 0
+    ) {
+      pendingMoodScrollRef.current = null;
+      setTimeout(scrollToMood, 80);
+    }
+  }, [moodResult, scrollToMood]);
   // Each screen starts at its top: a page never inherits scroll, and the player opens
   // at its top and gives the page back where it was. The position is tracked from
   // scroll events, so opening and closing force no layout when nothing is scrolled.
@@ -2044,15 +2083,19 @@ export default function App() {
   const _headline = personalized ? `Your frequency, ${daypart() === "night" || daypart() === "evening" ? "tonight" : "today"}` : "Find your frequency";
   // Mood chips: one mood at a time re-shapes the suggestions; choosing it again clears it.
   const activeMood = MOODS.find((item) => item.id === mood) || null;
-  const moodTracks = useMemo(() => (mood && moodResult.mood === mood ? tasteFilter(moodResult.tracks) : []), [mood, moodResult]);
-  const _moodLoading = Boolean(mood) && moodResult.mood !== mood;
-  const moodMode = Boolean(activeMood) && moodTracks.length >= 5;
+  const moodTracks = useMemo(() => {
+    if (!mood || moodResult.mood !== mood) return [];
+    const filtered = tasteFilter(moodResult.tracks);
+    return filtered.length >= 4 ? filtered : moodResult.tracks;
+  }, [mood, moodResult]);
+  const moodLoading = Boolean(mood) && moodResult.mood !== mood;
+  const moodMode = Boolean(activeMood) && moodTracks.length > 0;
   const featured = moodMode ? moodTracks.slice(0, 6) : personalized ? personalMix.slice(0, 6) : starterPicks;
   const heroTrack =
     (immersive ? player.track : null) || featured[featureIndex] || featured[0];
-  // A full grid or none of the leftovers: a short mix reuses the spotlight picks.
+  // A full grid: in mood mode show top mood tracks
   const madeForYou = moodMode
-    ? moodTracks.slice(6, 12).length >= 4 ? moodTracks.slice(6, 12) : moodTracks.slice(0, 6)
+    ? moodTracks.slice(0, 12)
     : personalized && personalMix.length >= 10 ? personalMix.slice(6, 12) : featured.slice(0, 6);
   const moreForMood = moodMode ? moodTracks.slice(12, 24) : [];
   const favouriteArtists = forYou.map((row) => row.seed.artist).filter((name, i, all) => all.indexOf(name) === i);
@@ -3205,6 +3248,10 @@ export default function App() {
                                 navigate(s.navTarget);
                               } else if (s.moodTarget) {
                                 setMood(s.moodTarget);
+                                pendingMoodScrollRef.current = s.moodTarget;
+                                if (moodResult.mood === s.moodTarget && moodResult.tracks.length > 0) {
+                                  setTimeout(scrollToMood, 60);
+                                }
                               } else {
                                 setStudioTab("teleprompter");
                                 navigate("studio");
@@ -3260,17 +3307,17 @@ export default function App() {
                       {VISUAL_MOODS.map((item) => {
                         const MoodIcon = item.icon;
                         const isSelected = mood === item.id;
+                        const isLoading = mood === item.id && moodResult.mood !== item.id;
                         return (
                           <button
                             key={item.id}
-                            className={`visual-mood-card ${isSelected ? "selected" : ""}`}
-                            onClick={() => {
-                              setMood((prev) => (prev === item.id ? null : item.id));
-                            }}
+                            className={`visual-mood-card ${isSelected ? "selected" : ""} ${isLoading ? "is-loading" : ""}`}
+                            onClick={() => handleMoodClick(item)}
+                            aria-label={`Browse ${item.label} songs`}
                           >
                             <img src={item.image} alt={item.label} className="mood-card-bg" />
                             <div className="mood-card-pill">
-                              <MoodIcon size={14} />
+                              {isLoading ? <LoaderCircle size={14} className="spin" /> : <MoodIcon size={14} />}
                               <span>{item.label}</span>
                             </div>
                           </button>
@@ -3450,7 +3497,11 @@ export default function App() {
                       </div>
                     </RevealSection>
                   ))}
-                  <RevealSection className="music-section">
+                  <RevealSection
+                    id="mood-results-section"
+                    ref={moodSectionRef}
+                    className={`music-section ${moodMode ? "mood-active-section" : ""}`}
+                  >
                     <div className="section-heading">
                       <div>
                         <h2>{moodMode ? activeMood.label : personalized ? "Made for you" : "Made for a good listen"}</h2>
@@ -3462,12 +3513,18 @@ export default function App() {
                               : "A few favorites to get you started."}
                         </p>
                       </div>
-                      <button
-                        className="text-button"
-                        onClick={() => navigate("search")}
-                      >
-                        Explore music <ArrowRight size={16} />
-                      </button>
+                      {moodMode ? (
+                        <button className="text-button" onClick={() => play(moodTracks[0], moodTracks)}>
+                          Play all <Play size={14} fill="currentColor" />
+                        </button>
+                      ) : (
+                        <button
+                          className="text-button"
+                          onClick={() => navigate("search")}
+                        >
+                          Explore music <ArrowRight size={16} />
+                        </button>
+                      )}
                     </div>
                     <div className="album-grid">
                       {madeForYou.map((track) => (
@@ -3475,7 +3532,7 @@ export default function App() {
                           variants={revealCard}
                           className="album-card" {...intent(track)}
                           key={track.id}
-                          onClick={() => play(track)}
+                          onClick={() => play(track, madeForYou)}
                         >
                           <div className="album-image spotlight">
                             <Cover track={track} />
