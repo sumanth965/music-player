@@ -1966,6 +1966,12 @@ export default function App() {
     const metaTheme = document.querySelector('meta[name="theme-color"]');
     const darkActive = isDark || immersive;
     if (metaTheme) metaTheme.setAttribute('content', darkActive ? '#140d09' : '#faf7f2');
+    if (typeof document !== "undefined") {
+      document.documentElement.classList.toggle('dark', darkActive);
+      document.body.classList.toggle('dark-theme', darkActive);
+      document.body.style.backgroundColor = darkActive ? '#120c08' : '#faf7f2';
+      document.body.style.color = darkActive ? '#f5ede4' : '#2b1b11';
+    }
     if (immersive) {
       pageScroll.current = scrollY.current;
       if (scrollY.current) jumpTo(0);
@@ -2978,6 +2984,44 @@ export default function App() {
                 <span>Recently Played</span>
               </button>
             </nav>
+          </div>
+          <div className="sidebar-wave-art" aria-hidden="true">
+            <svg viewBox="0 0 240 80" fill="none" preserveAspectRatio="none">
+              <path
+                d="M 0 60 Q 55 35 110 55 T 240 50 L 240 80 L 0 80 Z"
+                fill="url(#sidebarWaveGrad)"
+                opacity="0.4"
+              />
+              <path
+                d="M 0 65 Q 60 42 120 58 T 240 52"
+                stroke="url(#sidebarWaveStroke1)"
+                strokeWidth="1.5"
+                fill="none"
+              />
+              <path
+                d="M 0 72 Q 70 52 140 66 T 240 58"
+                stroke="url(#sidebarWaveStroke2)"
+                strokeWidth="1.5"
+                fill="none"
+                opacity="0.75"
+              />
+              <defs>
+                <linearGradient id="sidebarWaveGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#F28A32" stopOpacity="0.45" />
+                  <stop offset="100%" stopColor="#F28A32" stopOpacity="0" />
+                </linearGradient>
+                <linearGradient id="sidebarWaveStroke1" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#F28A32" stopOpacity="0.15" />
+                  <stop offset="50%" stopColor="#FFAA52" stopOpacity="0.9" />
+                  <stop offset="100%" stopColor="#F28A32" stopOpacity="0.25" />
+                </linearGradient>
+                <linearGradient id="sidebarWaveStroke2" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#F28A32" stopOpacity="0.2" />
+                  <stop offset="60%" stopColor="#F28A32" stopOpacity="0.8" />
+                  <stop offset="100%" stopColor="#FFAA52" stopOpacity="0.2" />
+                </linearGradient>
+              </defs>
+            </svg>
           </div>
         </aside>
         <Motion.main
