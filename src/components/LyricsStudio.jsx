@@ -24,6 +24,7 @@ import {
   Languages,
   ArrowDownCircle,
   X,
+  LoaderCircle,
 } from "lucide-react";
 import { useStore } from "../hooks/useStore";
 import {
@@ -284,7 +285,17 @@ export default function LyricsStudio({
         ref={containerRef}
         onScroll={handleScroll}
       >
-        {parsedLyrics.length === 0 ? (
+        {player.lyricsLoading ? (
+          <div className="studio-loading-state" role="status" aria-live="polite">
+            <LoaderCircle size={32} className="spin" style={{ color: "var(--accent, #ea580c)" }} />
+            <h3 style={{ margin: "16px 0 6px", fontSize: "18px", color: "var(--text-primary, #2b1b11)" }}>
+              Finding the right words...
+            </h3>
+            <p style={{ margin: 0, fontSize: "13px", color: "var(--text-secondary, #7a685b)" }}>
+              Searching synchronized lyrics from Swar audio cloud
+            </p>
+          </div>
+        ) : parsedLyrics.length === 0 ? (
           <div className="studio-empty-state">
             <SongTextData player={player} />
           </div>

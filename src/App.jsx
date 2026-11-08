@@ -2432,7 +2432,7 @@ export default function App() {
   const videoCard = (track, i, list) => (
     <Motion.button key={track.id} {...listItem(i)} className="video-card" onClick={() => play(track, list)} aria-label={`Play ${track.title} by ${track.artist}`}>
       <span className="video-thumb">
-        {track.artwork ? <img src={track.artwork} alt="" loading="lazy" decoding="async" /> : <Video aria-hidden="true" />}
+        {track.artwork ? <img src={track.artwork} alt="" loading="lazy" decoding="async" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = DEFAULT_TRACK_ARTWORK; }} /> : <Video aria-hidden="true" />}
         <em>{formatTime(track.duration)}</em>
         <span className="video-play" aria-hidden="true">
           <Play size={18} fill="currentColor" />
@@ -2448,7 +2448,7 @@ export default function App() {
   const collectionCard = (type) => (item, i) => (
     <Motion.button key={`${type}-${item.id}`} {...listItem(i)} className="collection-card" onClick={() => openCollection(type, item)} aria-label={`Open ${item.title}`}>
       <span className="collection-cover">
-        {item.artwork ? <img src={type === "album" ? artworkAt(item.artwork, 320) : item.artwork} alt="" loading="lazy" decoding="async" /> : <Disc3 aria-hidden="true" />}
+        {item.artwork ? <img src={type === "album" ? artworkAt(item.artwork, 320) : item.artwork} alt="" loading="lazy" decoding="async" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = DEFAULT_TRACK_ARTWORK; }} /> : <Disc3 aria-hidden="true" />}
         {type === "playlist" && item.count > 0 && <em>{item.count}</em>}
       </span>
       <strong>{item.title}</strong>
@@ -2457,7 +2457,7 @@ export default function App() {
   );
   const artistCard = (item, i) => (
     <Motion.button key={`artist-${item.id}`} {...listItem(i)} className="artist-card" onClick={() => openCollection("artist", item)} aria-label={`Open ${item.name}`}>
-      <span className="artist-avatar">{item.artwork ? <img src={item.artwork} alt="" loading="lazy" decoding="async" /> : <UserRound aria-hidden="true" />}</span>
+      <span className="artist-avatar">{item.artwork ? <img src={item.artwork} alt="" loading="lazy" decoding="async" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = DEFAULT_TRACK_ARTWORK; }} /> : <UserRound aria-hidden="true" />}</span>
       <strong>{item.name}</strong>
       <small>{item.fans ? `${formatCount(item.fans)} fans` : "Artist"}</small>
     </Motion.button>
@@ -2465,10 +2465,10 @@ export default function App() {
   const topResultCard = () => (
     <div className={`top-result ${topKind}`}>
       {topKind === "artist" ? (
-        <span className="artist-avatar large">{topItem.artwork ? <img src={topItem.artwork} alt="" /> : <UserRound aria-hidden="true" />}</span>
+        <span className="artist-avatar large">{topItem.artwork ? <img src={topItem.artwork} alt="" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = DEFAULT_TRACK_ARTWORK; }} /> : <UserRound aria-hidden="true" />}</span>
       ) : topKind === "video" ? (
         <span className="video-thumb large">
-          <img src={topItem.artwork} alt="" />
+          <img src={topItem.artwork} alt="" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = DEFAULT_TRACK_ARTWORK; }} />
         </span>
       ) : (
         <FadingCover track={topItem} eager />
@@ -2786,7 +2786,7 @@ export default function App() {
             <ArrowLeft />
           </IconButton>
           <span className={collection?.type === "artist" ? "artist-avatar large" : "collection-cover large"}>
-            {artwork ? <img src={collection?.type === "album" ? artworkAt(artwork, 600) : artwork} alt="" /> : <Disc3 aria-hidden="true" />}
+            {artwork ? <img src={collection?.type === "album" ? artworkAt(artwork, 600) : artwork} alt="" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = DEFAULT_TRACK_ARTWORK; }} /> : <Disc3 aria-hidden="true" />}
           </span>
           <div>
             <span className="feature-label">
@@ -3413,7 +3413,7 @@ export default function App() {
                         <div key={track.id} className="recent-card">
                           <button className="recent-card-body" onClick={() => play(track)}>
                             <div className="recent-thumb">
-                              <img src={track.artwork || "/moods/chill.jpg"} alt={track.title} />
+                              <img src={track.artwork || "/moods/chill.jpg"} alt={track.title} onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = DEFAULT_TRACK_ARTWORK; }} />
                               <div className="recent-hover-play">
                                 <Play size={16} fill="currentColor" />
                               </div>
@@ -3694,7 +3694,7 @@ export default function App() {
                             }}
                           >
                             <span className="artist-avatar">
-                              {track.artwork ? <img src={artworkAt(track.artwork, 300)} alt="" loading="lazy" decoding="async" /> : <UserRound aria-hidden="true" />}
+                              {track.artwork ? <img src={artworkAt(track.artwork, 300)} alt="" loading="lazy" decoding="async" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = DEFAULT_TRACK_ARTWORK; }} /> : <UserRound aria-hidden="true" />}
                             </span>
                             <strong>{track.artist}</strong>
                             <small>{track.title}</small>

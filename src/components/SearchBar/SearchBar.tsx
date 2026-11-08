@@ -23,6 +23,14 @@ interface SearchBarProps {
   autoFocus?: boolean;
 }
 
+const DEFAULT_TRACK_ARTWORK = "data:image/svg+xml," + encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300">
+    <rect width="300" height="300" fill="#2D1A10"/>
+    <circle cx="150" cy="150" r="45" fill="rgba(234,88,12,0.18)"/>
+    <path d="M142 165V125c0-3 2-5 5-5h22c3 0 5 2 5 5v12c0 3-2 5-5 5h-14v23c0 7-6 13-13 13s-13-6-13-13 6-13 13-13c2 0 4 1 5 2z" fill="#EA580C"/>
+  </svg>`
+);
+
 const SearchBar: React.FC<SearchBarProps> = ({
   query,
   setQuery,
@@ -157,7 +165,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
                 >
                   <div className="sbar__drop-art">
                     {art
-                      ? <img src={art} alt="" loading="lazy" />
+                      ? <img src={art} alt="" loading="lazy" onError={(e) => { (e.currentTarget as HTMLImageElement).src = DEFAULT_TRACK_ARTWORK; }} />
                       : <Music2 size={14} />}
                   </div>
                   <div className="sbar__drop-info">
@@ -202,7 +210,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
               >
                 <div className="sbar__drop-art">
                   {entry.art
-                    ? <img src={entry.art} alt="" loading="lazy" />
+                    ? <img src={entry.art} alt="" loading="lazy" onError={(e) => { (e.currentTarget as HTMLImageElement).src = DEFAULT_TRACK_ARTWORK; }} />
                     : <Clock size={14} />}
                 </div>
                 <div className="sbar__drop-info">
