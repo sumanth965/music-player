@@ -688,26 +688,117 @@ app.get('/api/video/search', async (req: Request, res: Response) => {
   }
 });
 
-// ─── Structured Lyrics (4-Layer Scraper + Cache) ─────────────────────────────
+// Helper to parse LRC timestamp strings into timed lines
+function parseLrcToLines(lrc: string): Array<{ time: number; text: string }> {
+  const lines: Array<{ time: number; text: string }> = [];
+  const regex = /\[(\d{2}):(\d{2})(?:\.(\d{2,3}))?\](.*)/;
+  for (const rawLine of lrc.split(/\r?\n/)) {
+    const match = rawLine.match(regex);
+    if (match) {
+      const min = parseInt(match[1], 10);
+      const sec = parseInt(match[2], 10);
+      const ms = match[3] ? parseFloat(`0.${match[3]}`) : 0;
+      const text = match[4]?.trim();
+      if (text) {
+        lines.push({ time: min * 60 + sec + ms, text });
+      }
+    }
+  }
+  return lines.sort((a, b) => a.time - b.time);
+}
+
+// ─── Structured Lyrics (Unified Multi-Provider + Scraper Fallback) ────────────
 app.get('/api/lyrics/structured', async (req: Request, res: Response) => {
-  const artist = req.query.artist as string;
-  const title  = req.query.title  as string;
+  const artist = String(req.query.artist || '').trim();
+  const title  = String(req.query.title || req.query.track || '').trim();
   if (!artist || !title) return res.status(400).json({ error: 'Missing artist or title' });
 
-  const cached = lyricsCache.get(artist, title);
-  if (cached) {
+  // 1. In-memory cache hit (only if valid lines present)
+  const cached: any = lyricsCache.get(artist, title);
+  if (cached && Array.isArray(cached.lines) && cached.lines.length > 0) {
     console.log(`[CACHE] HIT for "${artist} - ${title}"`);
     return res.json(cached);
   }
 
-  const { lyrics, error } = await scraper.fetchLyrics(artist, title);
-  if (!lyrics) {
-    return res.status(404).json({ error: error || 'Lyrics not found' });
+  // 2. Primary: Multi-provider lyrics engine (KuGou word sync, NetEase, LRCLib, YouTube captions)
+  try {
+    const apiPath = new URL('../../api/lyrics/structured.js', import.meta.url).href;
+    const mod = await import(apiPath);
+    const handler = mod.default || mod;
+
+    let interceptedData: any = null;
+    let interceptedStatus = 200;
+
+    const fakeRes: any = {
+      statusCode: 200,
+      setHeader: () => {},
+      status(code: number) {
+        interceptedStatus = code;
+        return this;
+      },
+      json(data: any) {
+        interceptedData = data;
+        return this;
+      },
+      end() {
+        return this;
+      },
+    };
+
+    await handler(req, fakeRes);
+
+    if (interceptedData && Array.isArray(interceptedData.lines) && interceptedData.lines.length > 0) {
+      lyricsCache.set(artist, title, interceptedData);
+      console.log(`[LYRICS] Primary provider hit: ${interceptedData.source} (${interceptedData.sync}) - ${interceptedData.lines.length} lines`);
+      return res.status(interceptedStatus).json(interceptedData);
+    }
+  } catch (err: any) {
+    console.warn('[LYRICS] Primary multi-provider engine failed, falling back to scraper:', err.message);
   }
 
-  lyricsCache.set(artist, title, lyrics);
-  console.log(`[CACHE] STORED "${artist} - ${title}" (source: ${lyrics.source})`);
-  res.json(lyrics);
+  // 3. Secondary Fallback: Multi-layer Genius / Musixmatch / Web Scraper
+  try {
+    const { lyrics } = await scraper.fetchLyrics(artist, title);
+    if (lyrics) {
+      let lines: Array<{ time?: number; text: string }> = [];
+      let sync: 'word' | 'line' | 'plain' = 'plain';
+
+      if (lyrics.syncedLrc) {
+        const parsed = parseLrcToLines(lyrics.syncedLrc);
+        if (parsed.length > 0) {
+          lines = parsed;
+          sync = 'line';
+        }
+      }
+
+      if (!lines.length && lyrics.rawText) {
+        lines = lyrics.rawText
+          .split(/\r?\n/)
+          .filter((l: string) => l.trim())
+          .map((text: string) => ({ text }));
+        sync = 'plain';
+      }
+
+      const formatted = {
+        source: lyrics.source,
+        sync,
+        plainLyrics: lyrics.rawText,
+        lines,
+        sections: lyrics.sections,
+      };
+
+      if (lines.length > 0) {
+        lyricsCache.set(artist, title, formatted as any);
+        console.log(`[LYRICS] Scraper fallback hit: ${formatted.source} - ${formatted.lines.length} lines`);
+      }
+      return res.json(formatted);
+    }
+  } catch (err: any) {
+    console.error('[LYRICS] Scraper fallback error:', err.message);
+  }
+
+  // 4. Return clean empty response if neither engine found lyrics
+  return res.json({ source: null, sync: 'plain', lines: [] });
 });
 
 // ─── Legacy: Genius HTML Scraper (backward compat) ───────────────────────────
