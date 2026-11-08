@@ -1,8 +1,43 @@
 /**
  * pitchTracker.js
  * Real-time microphone audio pitch detector using Web Audio API and normalized
- * autocorrelation (YIN-derivative), with MIDI/cents conversion and scoring mechanics.
+ * autocorrelation (YIN-derivative), with AudioWorklet offloading, MIDI/cents conversion,
+ * latency calibration, and scoring mechanics.
  */
+
+// Key for persisting mic latency compensation in milliseconds
+const LATENCY_KEY = 'swar_mic_latency_ms';
+
+/**
+ * Gets the user's calibrated microphone latency offset in milliseconds.
+ * Positive value shifts analysis window forward; negative shifts backward.
+ * @returns {number}
+ */
+export function getMicLatencyCalibration() {
+  if (typeof window === 'undefined' || !window.localStorage) return 0;
+  try {
+    const val = parseInt(window.localStorage.getItem(LATENCY_KEY), 10);
+    return isNaN(val) ? 0 : Math.max(-150, Math.min(150, val));
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Sets the user's calibrated microphone latency offset in milliseconds.
+ * @param {number} ms
+ * @returns {number}
+ */
+export function setMicLatencyCalibration(ms) {
+  if (typeof window === 'undefined' || !window.localStorage) return 0;
+  try {
+    const clamped = Math.max(-150, Math.min(150, Math.round(ms || 0)));
+    window.localStorage.setItem(LATENCY_KEY, String(clamped));
+    return clamped;
+  } catch {
+    return 0;
+  }
+}
 
 // Note names for MIDI numbers (MIDI 69 = A4 = 440 Hz)
 const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -99,6 +134,8 @@ export function autoCorrelate(buffer, sampleRate) {
 
 /**
  * Creates a PitchTracker session connected to the user's microphone.
+ * Uses dedicated AudioWorkletProcessor where supported, falling back gracefully
+ * to AnalyserNode + requestAnimationFrame.
  */
 export class PitchTracker {
   constructor({ onPitch, onVolume, sampleRate = 44100 }) {
@@ -107,6 +144,7 @@ export class PitchTracker {
     this.sampleRate = sampleRate;
     this.audioContext = null;
     this.analyser = null;
+    this.workletNode = null;
     this.micStream = null;
     this.sourceNode = null;
     this.isRunning = false;
@@ -131,14 +169,56 @@ export class PitchTracker {
       });
 
       this.sourceNode = this.audioContext.createMediaStreamSource(this.micStream);
-      this.analyser = this.audioContext.createAnalyser();
-      this.analyser.fftSize = 2048;
 
-      this.sourceNode.connect(this.analyser);
-      this.buffer = new Float32Array(this.analyser.fftSize);
+      // Attempt to load AudioWorklet
+      let workletReady = false;
+      if (this.audioContext.audioWorklet) {
+        try {
+          await this.audioContext.audioWorklet.addModule('/pitch-processor.worklet.js');
+          this.workletNode = new AudioWorkletNode(this.audioContext, 'pitch-processor', {
+            processorOptions: { sampleRate: this.sampleRate },
+          });
+
+          this.workletNode.port.onmessage = (event) => {
+            if (!this.isRunning) return;
+            const res = event.data;
+            if (!res) return;
+
+            if (this.onVolume && typeof res.rms === 'number') {
+              this.onVolume(res.rms);
+            }
+
+            if (res.pitch > 0 && this.onPitch) {
+              const midi = frequencyToMidi(res.pitch);
+              const details = midiToNoteDetails(midi);
+              this.onPitch({
+                pitch: res.pitch,
+                midi,
+                clarity: res.clarity,
+                rms: res.rms,
+                ...details,
+              });
+            }
+          };
+
+          this.sourceNode.connect(this.workletNode);
+          workletReady = true;
+        } catch {
+          // AudioWorklet load failed (e.g. cross-origin worker restriction or legacy context), fall back
+          workletReady = false;
+        }
+      }
+
+      // Fallback: AnalyserNode + RAF
+      if (!workletReady) {
+        this.analyser = this.audioContext.createAnalyser();
+        this.analyser.fftSize = 2048;
+        this.sourceNode.connect(this.analyser);
+        this.buffer = new Float32Array(this.analyser.fftSize);
+        this._pollLoop();
+      }
 
       this.isRunning = true;
-      this._pollLoop();
     } catch (err) {
       this.stop();
       throw err;
@@ -177,6 +257,16 @@ export class PitchTracker {
     if (this.animationFrameId) {
       cancelAnimationFrame(this.animationFrameId);
       this.animationFrameId = null;
+    }
+
+    if (this.workletNode) {
+      try {
+        this.workletNode.port.onmessage = null;
+        this.workletNode.disconnect();
+      } catch {
+        /* ignore */
+      }
+      this.workletNode = null;
     }
 
     if (this.sourceNode) {

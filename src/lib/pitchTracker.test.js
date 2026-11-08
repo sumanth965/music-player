@@ -6,6 +6,8 @@ import {
   evaluatePitchAccuracy,
   getStreakMultiplier,
   computePerformanceResults,
+  getMicLatencyCalibration,
+  setMicLatencyCalibration,
 } from './pitchTracker.js';
 
 test('frequencyToMidi converts standard frequencies correctly', () => {
@@ -68,4 +70,31 @@ test('computePerformanceResults calculates grades accurately', () => {
   assert.equal(result.grade, 'S');
   assert.equal(result.pitchAccuracy, 92);
   assert.equal(result.maxStreak, 14);
+});
+
+test('getMicLatencyCalibration and setMicLatencyCalibration clamp bounds', () => {
+  // In Node test environment, window is undefined, so it returns 0 gracefully
+  assert.equal(getMicLatencyCalibration(), 0);
+  assert.equal(setMicLatencyCalibration(50), 0);
+
+  // When simulated with mock window.localStorage
+  global.window = {
+    localStorage: {
+      _store: {},
+      getItem(k) { return this._store[k] ?? null; },
+      setItem(k, v) { this._store[k] = String(v); },
+    },
+  };
+
+  assert.equal(getMicLatencyCalibration(), 0);
+  assert.equal(setMicLatencyCalibration(45), 45);
+  assert.equal(getMicLatencyCalibration(), 45);
+
+  // Clamping -150 to +150
+  assert.equal(setMicLatencyCalibration(300), 150);
+  assert.equal(getMicLatencyCalibration(), 150);
+  assert.equal(setMicLatencyCalibration(-250), -150);
+  assert.equal(getMicLatencyCalibration(), -150);
+
+  delete global.window;
 });

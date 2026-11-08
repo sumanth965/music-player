@@ -26,7 +26,7 @@
     "lint": "eslint .",
     "typecheck:server": "npm run typecheck --prefix server",
     "preview": "vite preview",
-    "test": "node --test api/_lib/*.test.js src/lib/*.test.js shared/*.test.js"
+    "test": "node --test api/_lib/*.test.js src/lib/*.test.js src/lib/storage/*.test.js src/lib/vocalIntelligence/*.test.js shared/*.test.js"
   },
   "dependencies": {
     "calligraph": "^1.4.1",

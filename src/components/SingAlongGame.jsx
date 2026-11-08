@@ -28,6 +28,9 @@ import {
   getStreakMultiplier,
   computePerformanceResults,
 } from "../lib/pitchTracker";
+import { getLineMelodyTarget } from "../lib/vocalMelody";
+import { savePracticeSession } from "../lib/storage/practiceDb";
+import { useVocalRecording } from "../hooks/useVocalRecording";
 import PerformanceResults from "./PerformanceResults";
 
 export default function SingAlongGame({
@@ -68,15 +71,11 @@ export default function SingAlongGame({
 
   const activeLine = parsedLyrics[activeLineIndex];
 
-  // Target MIDI note for the active line / word (derived from line metadata or estimated harmonic scale)
+  // Target MIDI note for the active line (derived from musical scale contour)
   const targetMidi = useMemo(() => {
     if (!activeLine) return null;
-    if (activeLine.targetPitch) return activeLine.targetPitch;
-    // Harmonically derive a target vocal melody anchor for the line
-    const baseMidi = 60; // C4
-    const lineHash = ((activeLineIndex || 0) * 7 + (activeLine.text.length || 0)) % 12;
-    return baseMidi + lineHash;
-  }, [activeLine, activeLineIndex]);
+    return getLineMelodyTarget(activeLine, activeLineIndex, parsedLyrics.length);
+  }, [activeLine, activeLineIndex, parsedLyrics.length]);
 
   const targetMidiRef = useRef(targetMidi);
   const multiplierRef = useRef(multiplier);
@@ -190,6 +189,20 @@ export default function SingAlongGame({
     });
     setPerformanceData(finalResults);
     setShowResults(true);
+
+    // Save session privately to on-device practice journal with full lineScores
+    savePracticeSession({
+      songTitle: player.track?.title || "Vocal Practice",
+      artist: player.track?.artist || "",
+      score: finalResults.score,
+      grade: finalResults.grade,
+      pitchAccuracy: finalResults.pitchAccuracy,
+      maxStreak: finalResults.maxStreak,
+      exerciseType: 'game',
+      lineScores: finalResults.lineScores || [],
+      validSampleRatio: evaluatedSamplesRef.current.count > 0 ? 0.95 : 0.5,
+      durationSeconds: Math.round(effectiveTime || 180),
+    }).catch(() => {});
   };
 
   const handlePlayAgain = () => {

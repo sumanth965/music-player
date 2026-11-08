@@ -10480,6 +10480,1428 @@ html.lenis body {
   color: #f79d5c !important;
 }
 
+/* ==========================================================================
+   Practice Studio: Vocal Take Review Card
+   ========================================================================== */
+.vocal-review-card {
+  background: rgba(234, 88, 12, 0.08);
+  border: 1px solid rgba(234, 88, 12, 0.25);
+  border-radius: 14px;
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  backdrop-filter: blur(12px);
+  margin-top: 10px;
+}
+
+.vocal-review-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.vocal-review-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ea580c;
+}
+
+.vocal-mic-glow {
+  color: #ea580c;
+  animation: pulse-glow 2s infinite ease-in-out;
+}
+
+.vocal-duration-tag {
+  font-size: 12px;
+  font-family: monospace;
+  color: #9a8b7f;
+  background: rgba(0, 0, 0, 0.15);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.vocal-review-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.vocal-play-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #ea580c;
+  color: #ffffff;
+  border: none;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+  flex-shrink: 0;
+}
+
+.vocal-play-btn:hover {
+  transform: scale(1.06);
+  background: #f97316;
+}
+
+.vocal-progress-track {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+}
+
+.vocal-progress-fill {
+  height: 100%;
+  background: #ea580c;
+  border-radius: 999px;
+  transition: width 0.1s linear;
+}
+
+.vocal-review-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vocal-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.vocal-action-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+}
+
+.vocal-action-btn.is-danger {
+  color: #ef4444;
+}
+
+.vocal-action-btn.is-danger:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+/* Record Take Button */
+.record-take-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  background: rgba(234, 88, 12, 0.12);
+  border: 1px solid rgba(234, 88, 12, 0.3);
+  color: #ea580c;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.record-take-btn:hover {
+  background: rgba(234, 88, 12, 0.2);
+  border-color: #ea580c;
+  transform: translateY(-1px);
+}
+
+.record-take-btn.is-recording {
+  background: #ef4444 !important;
+  color: #ffffff !important;
+  border-color: #dc2626 !important;
+  animation: pulse-glow 1.5s infinite ease-in-out;
+}
+
+/* ==========================================================================
+   Practice Studio: Vocal Warm-Ups & Scale Gym
+   ========================================================================== */
+.vocal-warmups-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px;
+  height: 100%;
+  overflow-y: auto;
+  border-radius: 18px;
+  background: radial-gradient(circle at 50% 10%, rgba(35, 25, 20, 0.3), rgba(18, 13, 10, 0.95));
+}
+
+.warmups-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.warmups-title-block {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.warmups-icon-glow {
+  color: #ea580c;
+}
+
+.warmups-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0;
+  color: #ffffff;
+}
+
+.warmups-subtitle {
+  font-size: 13px;
+  color: #a89a8e;
+}
+
+.warmups-drills-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.drill-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+.drill-card:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(234, 88, 12, 0.4);
+  transform: translateY(-2px);
+}
+
+.drill-card.is-selected {
+  background: rgba(234, 88, 12, 0.12);
+  border-color: #ea580c;
+  box-shadow: 0 4px 16px rgba(234, 88, 12, 0.25);
+}
+
+.drill-card-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #ea580c;
+}
+
+.drill-desc {
+  font-size: 12px;
+  color: #a89a8e;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.warmups-stage {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.stage-controls-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.root-key-picker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.picker-label {
+  font-size: 13px;
+  color: #a89a8e;
+  margin-right: 4px;
+}
+
+.key-chip {
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.key-chip:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.key-chip.is-active {
+  background: #ea580c;
+  color: #ffffff;
+  border-color: #ea580c;
+}
+
+.stage-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.stage-action-btn.is-starting {
+  background: linear-gradient(135deg, #ea580c, #f97316);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(234, 88, 12, 0.35);
+}
+
+.stage-action-btn.is-stopping {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.syllable-track {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 20px 0;
+}
+
+.syllable-bubble {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.syllable-bubble.is-active-bubble {
+  background: #ea580c;
+  color: #ffffff;
+  transform: scale(1.18);
+  box-shadow: 0 0 20px rgba(234, 88, 12, 0.5);
+  border-color: #ea580c;
+}
+
+.bubble-note {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.bubble-midi {
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+.warmups-meter-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+}
+
+.meter-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.meter-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #a89a8e;
+  letter-spacing: 0.05em;
+}
+
+.meter-pitch-display {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.detected-note {
+  font-size: 22px;
+  font-weight: 700;
+  color: #ea580c;
+}
+
+.target-note {
+  font-size: 13px;
+  color: #a89a8e;
+}
+
+.meter-score-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #ea580c;
+  background: rgba(234, 88, 12, 0.12);
+  padding: 6px 14px;
+  border-radius: 999px;
+}
+
+/* ==========================================================================
+   Practice Studio: Vocal Range & Tessitura Finder
+   ========================================================================== */
+.vocal-range-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px;
+  height: 100%;
+  overflow-y: auto;
+  border-radius: 18px;
+  background: radial-gradient(circle at 50% 10%, rgba(35, 25, 20, 0.3), rgba(18, 13, 10, 0.95));
+}
+
+.range-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.range-icon-pulse {
+  color: #ea580c;
+}
+
+.range-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0;
+  color: #ffffff;
+}
+
+.range-subtitle {
+  font-size: 13px;
+  color: #a89a8e;
+}
+
+.range-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 20px;
+  max-width: 600px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.range-intro-badge {
+  font-size: 12px;
+  font-weight: 700;
+  color: #ea580c;
+  background: rgba(234, 88, 12, 0.12);
+  padding: 4px 12px;
+  border-radius: 999px;
+  text-transform: uppercase;
+}
+
+.range-intro-text {
+  font-size: 14px;
+  color: #d1c7bc;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.step-tag {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #ea580c;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.step-prompt {
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.step-guide {
+  font-size: 13px;
+  color: #a89a8e;
+  margin: 0;
+}
+
+.live-pitch-circle {
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  background: rgba(234, 88, 12, 0.08);
+  border: 2px solid #ea580c;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 12px 0;
+  animation: pulse-glow 2s infinite ease-in-out;
+}
+
+.live-pitch-circle.is-high {
+  border-color: #f97316;
+}
+
+.live-note-name {
+  font-size: 32px;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.live-note-freq {
+  font-size: 12px;
+  color: #ea580c;
+}
+
+.candidate-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #a89a8e;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 8px 16px;
+  border-radius: 8px;
+}
+
+.candidate-box strong {
+  color: #ea580c;
+}
+
+.step-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.range-primary-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #ea580c, #f97316);
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(234, 88, 12, 0.35);
+}
+
+.range-primary-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.range-secondary-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.range-secondary-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.range-span-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  width: 100%;
+}
+
+.span-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.span-label {
+  font-size: 12px;
+  color: #a89a8e;
+}
+
+.span-val {
+  font-size: 26px;
+  font-weight: 800;
+  color: #ea580c;
+}
+
+.span-divider {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.semitones-tag {
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffffff;
+  background: rgba(234, 88, 12, 0.2);
+  padding: 3px 10px;
+  border-radius: 6px;
+}
+
+.octaves-tag {
+  font-size: 11px;
+  color: #a89a8e;
+}
+
+.classification-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  color: #ffffff;
+  background: rgba(234, 88, 12, 0.15);
+  border: 1px solid rgba(234, 88, 12, 0.3);
+  padding: 10px 20px;
+  border-radius: 999px;
+}
+
+.classification-pill strong {
+  color: #ea580c;
+}
+
+.results-advice {
+  font-size: 13px;
+  color: #a89a8e;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ==========================================================================
+   Practice Studio: Practice Journal
+   ========================================================================== */
+.practice-journal-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px;
+  height: 100%;
+  overflow-y: auto;
+  border-radius: 18px;
+  background: radial-gradient(circle at 50% 10%, rgba(35, 25, 20, 0.3), rgba(18, 13, 10, 0.95));
+}
+
+.journal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.journal-title-block {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.journal-icon-glow {
+  color: #ea580c;
+}
+
+.journal-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0;
+  color: #ffffff;
+}
+
+.journal-subtitle {
+  font-size: 13px;
+  color: #a89a8e;
+}
+
+.journal-clear-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #ef4444;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.journal-clear-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.journal-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.journal-stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.journal-stat-card .stat-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #a89a8e;
+  letter-spacing: 0.05em;
+}
+
+.journal-stat-card .stat-value {
+  font-size: 22px;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.journal-stat-card .grade-highlight {
+  color: #ea580c;
+}
+
+.journal-history-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.panel-heading {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.journal-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px 20px;
+  color: #a89a8e;
+  gap: 8px;
+}
+
+.empty-icon {
+  color: rgba(255, 255, 255, 0.2);
+  margin-bottom: 8px;
+}
+
+.journal-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.journal-session-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  transition: all 0.15s ease;
+}
+
+.journal-session-row:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(234, 88, 12, 0.3);
+  transform: translateX(2px);
+}
+
+.session-grade-badge {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  font-weight: 800;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+.session-grade-badge.grade-s {
+  background: linear-gradient(135deg, #f59e0b, #ea580c);
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
+}
+
+.session-grade-badge.grade-a {
+  background: #10b981;
+}
+
+.session-grade-badge.grade-b {
+  background: #3b82f6;
+}
+
+.session-grade-badge.grade-c {
+  background: #8b5cf6;
+}
+
+.session-grade-badge.grade-d {
+  background: #6b7280;
+}
+
+.session-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.session-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.session-meta {
+  font-size: 12px;
+  color: #a89a8e;
+}
+
+.session-metrics {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.metric-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #ea580c;
+  background: rgba(234, 88, 12, 0.1);
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.metric-pill.streak {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+}
+
+/* ==========================================================================
+   Practice Studio: Adaptive Vocal Intelligence & Coach Dashboard
+   ========================================================================== */
+.adaptive-coach-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px;
+  height: 100%;
+  overflow-y: auto;
+  border-radius: 18px;
+  background: radial-gradient(circle at 50% 10%, rgba(35, 25, 20, 0.3), rgba(18, 13, 10, 0.95));
+}
+
+.coach-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.coach-title-block {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.coach-icon-glow {
+  color: #ea580c;
+}
+
+.coach-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0;
+  color: #ffffff;
+}
+
+.coach-subtitle {
+  font-size: 13px;
+  color: #a89a8e;
+}
+
+.difficulty-tier-picker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 4px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tier-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: #a89a8e;
+  padding: 0 8px;
+}
+
+.tier-pill {
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: transparent;
+  border: none;
+  color: #d1c7bc;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tier-pill:hover {
+  color: #ffffff;
+}
+
+.tier-pill.is-active {
+  background: #ea580c;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(234, 88, 12, 0.4);
+}
+
+.coach-main-grid {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 18px;
+}
+
+@media (max-width: 950px) {
+  .coach-main-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.coach-card {
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.coach-right-col {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.card-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #ea580c;
+  background: rgba(234, 88, 12, 0.12);
+  padding: 4px 10px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.card-badge.opportunity-badge {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+}
+
+.card-badge.caution-badge {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.plan-progress-tag {
+  font-size: 12px;
+  color: #a89a8e;
+}
+
+.plan-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.plan-tasks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.plan-task-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: all 0.15s ease;
+}
+
+.plan-task-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(234, 88, 12, 0.25);
+}
+
+.plan-task-item.is-completed {
+  opacity: 0.65;
+  background: rgba(16, 185, 129, 0.06);
+  border-color: rgba(16, 185, 129, 0.2);
+}
+
+.plan-task-item.is-completed .task-name {
+  text-decoration: line-through;
+  color: #a89a8e;
+}
+
+.task-check-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: grid;
+  place-items: center;
+}
+
+.check-done {
+  color: #10b981;
+}
+
+.check-todo {
+  color: #a89a8e;
+}
+
+.task-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.task-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.task-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.task-duration {
+  font-size: 11px;
+  font-weight: 700;
+  color: #ea580c;
+  background: rgba(234, 88, 12, 0.12);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.task-reason {
+  font-size: 12px;
+  color: #a89a8e;
+  line-height: 1.35;
+}
+
+.task-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(234, 88, 12, 0.15);
+  border: 1px solid rgba(234, 88, 12, 0.3);
+  color: #ea580c;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.task-action-btn:hover {
+  background: #ea580c;
+  color: #ffffff;
+}
+
+/* Opportunity Card */
+.opportunity-card {
+  border-color: rgba(245, 158, 11, 0.3);
+  background: rgba(245, 158, 11, 0.05);
+}
+
+.opp-level {
+  font-size: 11px;
+  font-weight: 700;
+  color: #f59e0b;
+  text-transform: uppercase;
+}
+
+.opp-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.opp-reason {
+  font-size: 13px;
+  color: #d1c7bc;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.opp-evidence-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  font-size: 12px;
+  color: #a89a8e;
+}
+
+.evidence-icon {
+  color: #10b981;
+  flex-shrink: 0;
+}
+
+.opp-cta-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #ea580c, #f59e0b);
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(234, 88, 12, 0.35);
+}
+
+.opp-cta-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(234, 88, 12, 0.5);
+}
+
+/* Insights Card */
+.insights-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.insight-bullet {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-left: 3px solid #ea580c;
+}
+
+.insight-bullet.positive {
+  border-left-color: #10b981;
+}
+
+.insight-bullet.caution {
+  border-left-color: #f59e0b;
+}
+
+.insight-bullet.opportunity {
+  border-left-color: #ea580c;
+}
+
+.insight-headline {
+  font-size: 13px;
+  color: #ffffff;
+}
+
+.insight-msg {
+  font-size: 12px;
+  color: #a89a8e;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.insight-evidence {
+  font-size: 11px;
+  color: #7d6e62;
+  font-family: monospace;
+}
+
+/* Weak Sections Card */
+.weak-sections-card {
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.weak-sections-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.weak-section-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.weak-section-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.weak-song {
+  font-size: 11px;
+  font-weight: 700;
+  color: #ea580c;
+  text-transform: uppercase;
+}
+
+.weak-lyric {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.weak-reason {
+  font-size: 11px;
+  color: #a89a8e;
+}
+
+.weak-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(234, 88, 12, 0.15);
+  border: 1px solid rgba(234, 88, 12, 0.3);
+  color: #ea580c;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.weak-action-btn:hover {
+  background: #ea580c;
+  color: #ffffff;
+}
+
+/* Stats Strip */
+.coach-stats-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+}
+
+.stat-pill {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  text-align: center;
+}
+
+.stat-num {
+  font-size: 20px;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.stat-lbl {
+  font-size: 11px;
+  color: #a89a8e;
+}
+
+/* Trend Sparkline Card in Journal */
+.journal-trend-card {
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.trend-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.trend-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #ea580c;
+  text-transform: uppercase;
+}
+
+.trend-subtext {
+  font-size: 11px;
+  color: #a89a8e;
+}
+
+.trend-svg-wrapper {
+  width: 100%;
+  height: 60px;
+}
+
+.trend-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.exercise-type-tag {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #ea580c;
+  background: rgba(234, 88, 12, 0.12);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.delete-session-btn {
+  background: transparent;
+  border: none;
+  color: #7d6e62;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.delete-session-btn:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.15);
+}
+
+
+
 
 
 

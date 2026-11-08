@@ -70,11 +70,18 @@ import {
   Folder,
   FolderUp,
   FileText,
+  Calendar,
+  Award,
+  TrendingUp,
 } from "lucide-react";
 import LyricsStudio from "./components/LyricsStudio";
 import PracticeMode from "./components/PracticeMode";
 import SingAlongGame from "./components/SingAlongGame";
 import SongTextData from "./components/SongTextData";
+import VocalWarmups from "./components/VocalWarmups";
+import VocalRangeTest from "./components/VocalRangeTest";
+import PracticeJournal from "./components/PracticeJournal";
+import AdaptiveCoachDashboard from "./components/VocalIntelligence/AdaptiveCoachDashboard";
 import { scanEntriesRecursively } from "./lib/localAudioMetadata";
 import { usePlayer } from "./hooks/usePlayer";
 import { useStore } from "./hooks/useStore";
@@ -2848,6 +2855,13 @@ export default function App() {
         </div>
         <div className="studio-tabs-row">
           <button
+            className={`studio-tab-btn ${studioTab === "coach" ? "is-selected" : ""}`}
+            onClick={() => setStudioTab("coach")}
+          >
+            <TrendingUp size={16} />
+            <span>AI Vocal Coach</span>
+          </button>
+          <button
             className={`studio-tab-btn ${studioTab === "teleprompter" ? "is-selected" : ""}`}
             onClick={() => setStudioTab("teleprompter")}
           >
@@ -2868,10 +2882,44 @@ export default function App() {
             <Mic2 size={16} />
             <span>Vocal Pitch Game</span>
           </button>
+          <button
+            className={`studio-tab-btn ${studioTab === "warmup" ? "is-selected" : ""}`}
+            onClick={() => setStudioTab("warmup")}
+          >
+            <Zap size={16} />
+            <span>Warm-Ups & Scales</span>
+          </button>
+          <button
+            className={`studio-tab-btn ${studioTab === "range" ? "is-selected" : ""}`}
+            onClick={() => setStudioTab("range")}
+          >
+            <Award size={16} />
+            <span>Vocal Range</span>
+          </button>
+          <button
+            className={`studio-tab-btn ${studioTab === "journal" ? "is-selected" : ""}`}
+            onClick={() => setStudioTab("journal")}
+          >
+            <Calendar size={16} />
+            <span>Practice Journal</span>
+          </button>
         </div>
       </div>
 
       <div className="studio-tab-body">
+        {studioTab === "coach" && (
+          <AdaptiveCoachDashboard
+            onStartWarmup={(drillId, rootKey) => {
+              setStudioTab("warmup");
+            }}
+            onOpenLooper={(lineIdx, songTitle) => {
+              if (typeof lineIdx === "number") setPracticeLine(lineIdx);
+              setStudioTab("practice");
+            }}
+            onOpenSingAlong={() => setStudioTab("game")}
+            onOpenVocalRange={() => setStudioTab("range")}
+          />
+        )}
         {studioTab === "teleprompter" && (
           <LyricsStudio
             player={player}
@@ -2898,6 +2946,15 @@ export default function App() {
               setStudioTab("practice");
             }}
           />
+        )}
+        {studioTab === "warmup" && (
+          <VocalWarmups onClose={() => setStudioTab("teleprompter")} />
+        )}
+        {studioTab === "range" && (
+          <VocalRangeTest onClose={() => setStudioTab("teleprompter")} />
+        )}
+        {studioTab === "journal" && (
+          <PracticeJournal onSelectSong={() => setStudioTab("teleprompter")} />
         )}
       </div>
     </div>

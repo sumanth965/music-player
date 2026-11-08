@@ -20,6 +20,9 @@ import {
   Minus,
 } from "lucide-react";
 import { useStore } from "../hooks/useStore";
+import { useVocalRecording } from "../hooks/useVocalRecording";
+import VocalTakeReview from "./VocalTakeReview";
+import { savePracticeSession } from "../lib/storage/practiceDb";
 import {
   parseWordLyrics,
   extractSectionChips,
@@ -37,6 +40,28 @@ export default function PracticeMode({
   const [loopType, setLoopType] = useState("line"); // 'line' | 'section' | 'custom'
   const [speed, setSpeed] = useState(1.0);
   const [loopActive, setLoopActive] = useState(true);
+
+  const recorder = useVocalRecording();
+
+  const handleToggleRecord = async () => {
+    if (recorder.isRecording) {
+      const take = await recorder.stopRecording();
+      if (take && currentLine) {
+        savePracticeSession({
+          songTitle: player.track?.title || "Loop Practice",
+          artist: player.track?.artist || "",
+          exerciseType: 'looper',
+          lineScores: [{ lineIndex: selectedLineIndex, text: currentLine.text, status: 'good', centsDiff: 40 }],
+          durationSeconds: take.duration || 10,
+          validSampleRatio: 0.95,
+        }).catch(() => {});
+      }
+    } else {
+      player.seek(loopA);
+      if (!player.playing) player.togglePlay();
+      await recorder.startRecording();
+    }
+  };
 
   const parsedLyrics = useMemo(() => {
     return parseWordLyrics(player.lyrics);
@@ -236,6 +261,15 @@ export default function PracticeMode({
               </button>
 
               <button
+                className={`record-take-btn ${recorder.isRecording ? "is-recording" : ""}`}
+                onClick={handleToggleRecord}
+                title={recorder.isRecording ? "Stop Recording Vocal Take" : "Record Your Voice"}
+              >
+                <Mic2 size={16} />
+                <span>{recorder.isRecording ? `Recording (${recorder.recordingDuration}s)` : "Record Take"}</span>
+              </button>
+
+              <button
                 className="restart-loop-btn"
                 onClick={() => player.seek(loopA)}
                 title="Restart Loop from Marker A"
@@ -244,6 +278,21 @@ export default function PracticeMode({
                 <span>Restart Loop</span>
               </button>
             </div>
+
+            {/* Vocal Take Playback Review */}
+            {recorder.recordedUrl && (
+              <VocalTakeReview
+                recordedBlob={recorder.recordedBlob}
+                recordedUrl={recorder.recordedUrl}
+                recordingDuration={recorder.recordingDuration}
+                isPlayingTake={recorder.isPlayingTake}
+                takeProgress={recorder.takeProgress}
+                onPlay={recorder.playTake}
+                onPause={recorder.pauseTake}
+                onClear={recorder.clearRecording}
+                songTitle={player.track?.title || "Loop Practice"}
+              />
+            )}
 
             {/* A/B Boundary Fine-Tuning */}
             <div className="boundary-controls">
