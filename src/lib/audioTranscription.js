@@ -9,17 +9,19 @@ import { buildApiUrl } from './api.js';
 const DEFAULT_GROQ_KEY =
   (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GROQ_API_KEY) ||
   (typeof globalThis !== 'undefined' && globalThis.process?.env?.VITE_GROQ_API_KEY) ||
+  (typeof globalThis !== 'undefined' && globalThis.process?.env?.GROQ_API_KEY) ||
   '';
 const LOCAL_BACKEND_URL = 'http://localhost:8000';
 
 /**
- * Gets active Groq API Key from localStorage or default.
+ * Gets active Groq API Key from environment or localStorage.
  */
 export function getGroqApiKey() {
   try {
     return (
+      DEFAULT_GROQ_KEY ||
       (typeof localStorage !== 'undefined' && localStorage.getItem('swar_groq_api_key')) ||
-      DEFAULT_GROQ_KEY
+      ''
     );
   } catch {
     return DEFAULT_GROQ_KEY;
@@ -260,7 +262,7 @@ export async function transcribeSongAudio(file, options = {}) {
   onProgress?.('Transcribing with Groq AI Whisper...');
   const apiKey = getGroqApiKey();
   if (!apiKey) {
-    throw new Error('Groq API Key not configured. Please add an API key in settings or backend.');
+    throw new Error('Groq AI Whisper is currently unavailable. Please verify server GROQ_API_KEY environment configuration.');
   }
 
   const uploadFile = await optimizeAudioForTranscription(file);

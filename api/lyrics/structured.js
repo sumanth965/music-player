@@ -1,5 +1,5 @@
 import { fetchLyrics } from '../_lib/lyrics-providers.js';
-import { withAlignment } from '../_lib/caption-align.js';
+import { withAlignment, captionsToLyrics } from '../_lib/caption-align.js';
 import { videoCaptions } from '../_lib/youtube.js';
 const cache = new Map();
 const requests = new Map();
@@ -48,7 +48,14 @@ export default async function handler(req, res) {
   // The playing video's captions are fetched alongside, to check the lyric timing.
   if (!pending.has(key)) pending.set(key, withAlignment(fetchLyrics(track), videoId ? videoCaptions(videoId).catch(() => null) : null));
   try {
-    const value = await pending.get(key) || empty;
+    let value = (await pending.get(key)) || empty;
+    if ((!value || !value.lines || !value.lines.length) && videoId) {
+      const caps = await videoCaptions(videoId).catch(() => null);
+      const fromCaps = captionsToLyrics(caps);
+      if (fromCaps?.lines?.length) {
+        value = fromCaps;
+      }
+    }
     if (cache.size >= 200) cache.delete(cache.keys().next().value);
     cache.set(key, { value, until: now + (value.lines.length ? 3600000 : 30000) });
     res.setHeader('Cache-Control', value.lines.length ? 'public, s-maxage=3600, stale-while-revalidate=86400' : 'public, s-maxage=30');

@@ -28,6 +28,43 @@ export function parseCaptionWords(data) {
   return words;
 }
 
+// Convert YouTube timedtext json3 events into synchronized lines & words
+export function captionsToLyrics(data) {
+  if (!data || !Array.isArray(data.events)) return null;
+  const lines = [];
+  for (const event of data.events) {
+    if (!Number.isFinite(event?.tStartMs) || !Array.isArray(event.segs)) continue;
+    const lineTime = Math.round(event.tStartMs) / 1000;
+    const words = [];
+    let text = '';
+    for (const seg of event.segs) {
+      const segText = seg?.utf8 || '';
+      text += segText;
+      const cleanTokens = tokens(segText);
+      if (cleanTokens.length) {
+        const start = (event.tStartMs + (Number.isFinite(seg?.tOffsetMs) ? seg.tOffsetMs : 0)) / 1000;
+        for (const t of cleanTokens) {
+          words.push({ text: t, start: Math.round(start * 100) / 100, end: Math.round((start + 0.35) * 100) / 100 });
+        }
+      }
+    }
+    const cleanLine = text.replace(/[\r\n]+/g, ' ').trim();
+    if (cleanLine && cleanLine !== '♪' && cleanLine !== '[Music]' && cleanLine !== '[Applause]') {
+      lines.push({
+        time: lineTime,
+        text: cleanLine,
+        words: words.length ? words : undefined,
+      });
+    }
+  }
+  if (!lines.length) return null;
+  return {
+    source: 'YouTube Captions',
+    sync: lines.some(l => l.words?.length) ? 'word' : 'line',
+    lines,
+  };
+}
+
 // Every timed three-word phrase in the lyrics: word-timed lines give each word's
 // start; line-timed lines only their first word's (the line's time).
 function lyricAnchors(lines) {

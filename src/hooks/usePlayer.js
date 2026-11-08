@@ -480,8 +480,9 @@ export function usePlayer() {
       host.replaceChildren(mount);
       showDeck(ytActive.current);
       let expired = false;
-      const timeout = setTimeout(() => { expired = true; instance.destroy(); deck.ready = null; reject(new Error('The video player did not respond. Please retry.')); }, 15000);
-      const instance = new YT.Player(mount, {
+      let playerInstance = null;
+      const timeout = setTimeout(() => { expired = true; playerInstance?.destroy?.(); deck.ready = null; reject(new Error('The video player did not respond. Please retry.')); }, 15000);
+      playerInstance = new YT.Player(mount, {
         videoId, width: '100%', height: '100%',
         playerVars: { playsinline: 1, controls: 1, origin: window.location.origin, rel: 0 },
         events: {
@@ -704,7 +705,13 @@ export function usePlayer() {
   const loadTrack = useCallback(async (selected, list, fadeIn = false, auto = false) => {
     if (!selected) return;
     // A song chosen by hand (or retried) gets a fresh chance to resolve.
-    if (!auto && unplayable.current.delete(selected.id)) setUnavailable(new Set(unplayable.current));
+    if (!auto) {
+      unplayable.current.delete(selected.id);
+      prepared.current.delete(selected.id);
+      alternates.current.delete(selected.id);
+      setUnavailable(new Set(unplayable.current));
+      setError('');
+    }
     flushListening();
     cancelMix();
     if (rush.current) { clearTimeout(rush.current.timer); rush.current = null; }

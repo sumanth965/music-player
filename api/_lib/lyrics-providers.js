@@ -67,7 +67,15 @@ async function lrclibSearch(track, signal) {
   const candidates = (Array.isArray(data) ? data : []).filter(item => item && match(item.trackName) === match(track.title) && match(item.artistName) === match(track.artist)
     && (!track.duration || Math.abs(Number(item.duration)-track.duration) <= 5));
   const hit = candidates.find(item => item.syncedLyrics) || candidates[0];
-  return hit ? parseTrack(hit,'LRCLib',track.duration,track) : null;
+  if (hit) return parseTrack(hit,'LRCLib',track.duration,track);
+
+  // Fallback for remixes/covers/DJ edits (e.g. Blasterjaxx - Unfaithful): search by track title
+  try {
+    const titleData = await get(urlFor('https://lrclib.net/api/search', { track_name: track.title }), signal);
+    const titleCandidates = (Array.isArray(titleData) ? titleData : []).filter(item => item && match(item.trackName) === match(track.title) && item.syncedLyrics);
+    if (titleCandidates[0]) return parseTrack(titleCandidates[0], 'LRCLib', track.duration, track);
+  } catch {}
+  return null;
 }
 
 const near = (seconds, track) => !track.duration || Math.abs(seconds - track.duration) <= 3;

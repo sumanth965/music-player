@@ -548,7 +548,7 @@ export async function handleTranscribe(req: Request, res: Response) {
     // Backend env var GROQ_API_KEY takes precedence for secure server-side execution
     const authHeader = req.headers.authorization || '';
     const clientKey = authHeader.replace(/^Bearer\s+/i, '').trim();
-    const apiKey = process.env.GROQ_API_KEY || clientKey;
+    const apiKey = process.env.GROQ_API_KEY || process.env.VITE_GROQ_API_KEY || clientKey;
 
     if (!apiKey) {
       return res.status(401).json({

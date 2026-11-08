@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   FileText,
   FileAudio,
@@ -8,14 +8,14 @@ import {
   Check,
   Copy,
   Mic,
-  Key,
   RefreshCw,
-  Sliders,
+  Search,
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
-import { getGroqApiKey, setGroqApiKey, transcribeSongAudio } from "../lib/audioTranscription";
+import { transcribeSongAudio } from "../lib/audioTranscription";
 import { getAudioFileForTrack } from "../lib/localAudioMetadata";
+import { buildApiUrl } from "../lib/api";
 
 export default function SongTextData({ player }) {
   const track = player.track;
@@ -24,21 +24,86 @@ export default function SongTextData({ player }) {
   const [pastedText, setPastedText] = useState("");
   const [copied, setCopied] = useState(false);
   const [copiedTranscript, setCopiedTranscript] = useState(false);
-  const [showKeyConfig, setShowKeyConfig] = useState(false);
-  const [customKey, setCustomKey] = useState(() => getGroqApiKey());
-  const [keySaved, setKeySaved] = useState(false);
   const [expandTranscript, setExpandTranscript] = useState(true);
   const [localTranscribing, setLocalTranscribing] = useState(false);
   const [localStatus, setLocalStatus] = useState("");
   const [transcribeError, setTranscribeError] = useState("");
+  const [isFetchingLyrics, setIsFetchingLyrics] = useState(false);
   const lrcInputRef = useRef(null);
+  const hasAttemptedFetch = useRef(new Set());
 
-  useEffect(() => {
-    const key = getGroqApiKey();
-    if (key && !customKey) {
-      setCustomKey(key);
+  const handleFetchOnlineLyrics = useCallback(async (isManual = false) => {
+    if (!track) return;
+    setIsFetchingLyrics(true);
+    setTranscribeError("");
+
+    try {
+      const rawTitle = track.title || "";
+      const rawArtist = track.artist || "";
+      const videoId = track.videoId || "";
+      const duration = track.duration || 0;
+
+      // Extract cleaned title candidates to maximize hit-rate on server:
+      // 1. Full original title
+      // 2. First segment before "|" (e.g. "Bollywood New Hit Songs | Hindi Songs..." -> "Bollywood New Hit Songs")
+      // 3. Segment after "-" (e.g. "Artist - Song Title" -> "Song Title")
+      // 4. Title with common video decoration stripped
+      const candidates = [
+        rawTitle,
+        rawTitle.split(/\s*\|\s*/)[0]?.trim(),
+        rawTitle.split(/\s*[-–—]\s*/).slice(1).join(" - ").trim(),
+        rawTitle.replace(/\s*[([](?:official|music|video|audio|lyrics?|jukebox|remix|hd|4k)[^)\]]*[)\]]/gi, "").trim(),
+      ].filter((t, idx, arr) => t && arr.indexOf(t) === idx);
+
+      let found = null;
+      for (const candidateTitle of candidates) {
+        try {
+          const res = await fetch(
+            buildApiUrl("/api/lyrics/structured", {
+              title: candidateTitle,
+              artist: rawArtist,
+              duration,
+              videoId,
+            })
+          );
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.lines && data.lines.length > 0) {
+              found = data;
+              break;
+            }
+          }
+        } catch {
+          // Continue to next candidate
+        }
+      }
+
+      if (found && found.lines && found.lines.length > 0) {
+        track.lyrics = found;
+        player.applyLyrics?.(found);
+      } else if (isManual) {
+        setTranscribeError(
+          "No synchronized text found in online databases for this title. Click 'Transcribe with Swar AI' to listen and generate lyrics automatically."
+        );
+      }
+    } catch (err) {
+      if (isManual) {
+        setTranscribeError(err.message || "Could not fetch lyrics from server.");
+      }
+    } finally {
+      setIsFetchingLyrics(false);
     }
-  }, [track]);
+  }, [track, player]);
+
+  // Attempt automatic online lyrics lookup when mounting for a song without lyrics
+  useEffect(() => {
+    if (!track) return;
+    const key = `${track.id || track.title}:${track.artist}`;
+    if (!track.lyrics?.lines?.length && !track.songText && !hasAttemptedFetch.current.has(key)) {
+      hasAttemptedFetch.current.add(key);
+      handleFetchOnlineLyrics(false);
+    }
+  }, [track, handleFetchOnlineLyrics]);
 
   if (!track) return null;
 
@@ -74,9 +139,6 @@ export default function SongTextData({ player }) {
 
   const handleTranscribeClick = async () => {
     setTranscribeError("");
-    if (customKey && customKey.trim()) {
-      setGroqApiKey(customKey.trim());
-    }
     setLocalTranscribing(true);
     setLocalStatus("Accessing audio track...");
 
@@ -90,10 +152,12 @@ export default function SongTextData({ player }) {
       setLocalStatus("Preparing audio file for AI Whisper...");
       const file = await getAudioFileForTrack(track);
       if (!file) {
-        throw new Error("Could not access the raw audio file. Please re-upload or select the audio file.");
+        // If it's a streaming online video without local audio file, trigger server lyrics fetch
+        await handleFetchOnlineLyrics(true);
+        return;
       }
 
-      setLocalStatus("Transcribing with Groq AI Whisper (whisper-large-v3)...");
+      setLocalStatus("Transcribing via Swar AI Whisper on server...");
       const result = await transcribeSongAudio(file, {
         onProgress: (msg) => setLocalStatus(msg),
       });
@@ -113,12 +177,6 @@ export default function SongTextData({ player }) {
       setLocalTranscribing(false);
       setLocalStatus("");
     }
-  };
-
-  const handleSaveApiKey = () => {
-    setGroqApiKey(customKey);
-    setKeySaved(true);
-    setTimeout(() => setKeySaved(false), 2000);
   };
 
   const facts = [
@@ -164,11 +222,12 @@ export default function SongTextData({ player }) {
         <div className="header-actions">
           <button
             className="secondary-pill-button sm-btn"
-            onClick={() => setShowKeyConfig(!showKeyConfig)}
-            title="Configure AI Whisper Transcription Settings"
+            onClick={() => handleFetchOnlineLyrics(true)}
+            disabled={isFetchingLyrics}
+            title="Fetch lyrics from Swar server API"
           >
-            <Key size={13} />
-            <span>AI Model Key</span>
+            <RefreshCw size={13} className={isFetchingLyrics ? "spin" : ""} />
+            <span>{isFetchingLyrics ? "Searching..." : "Fetch Lyrics"}</span>
           </button>
           <button
             className="copy-meta-btn"
@@ -180,30 +239,6 @@ export default function SongTextData({ player }) {
           </button>
         </div>
       </div>
-
-      {/* AI Key Configuration Drawer */}
-      {showKeyConfig && (
-        <div className="api-config-drawer">
-          <div className="api-config-row">
-            <span className="api-config-label">Groq Cloud Whisper API Key</span>
-            <input
-              type="password"
-              placeholder="gsk_..."
-              value={customKey}
-              onChange={(e) => setCustomKey(e.target.value)}
-              className="api-config-input"
-            />
-            <button className="primary-pill-button sm-btn" onClick={handleSaveApiKey}>
-              {keySaved ? <Check size={13} /> : <Sliders size={13} />}
-              <span>{keySaved ? "Saved" : "Save"}</span>
-            </button>
-          </div>
-          <p className="api-config-tip">
-            Default uses Groq’s <code>whisper-large-v3</code> cloud engine. If a local LyricSense Python
-            backend is running on port 8000, it automatically connects to it as well.
-          </p>
-        </div>
-      )}
 
       {/* Song Hero Info */}
       <div className="song-text-data-hero">
@@ -255,8 +290,8 @@ export default function SongTextData({ player }) {
               <Sparkles size={24} className="spin-slow" />
             </div>
             <div className="transcribing-text">
-              <h5>Listening to audio waveform…</h5>
-              <p>{transcriptionStatus || "Generating word-timed lyrics with Swar AI Whisper"}</p>
+              <h5>Listening to audio track…</h5>
+              <p>{transcriptionStatus || "Generating synchronized lyrics with Swar AI Whisper"}</p>
             </div>
           </div>
         ) : transcriptText ? (
@@ -300,61 +335,32 @@ export default function SongTextData({ player }) {
         ) : (
           <div className="transcription-empty-box">
             <p>
-              No text fetched from this song yet. Run Swar AI Whisper to listen directly to the audio
-              track and transcribe sung words into synchronized lyrics.
+              No lyrics synchronized for this track yet. Swar AI Whisper transcribes sung words
+              directly from the audio track using the server's cloud engine.
             </p>
             {transcribeError && (
               <div className="transcription-error-badge">
                 <span>⚠️ {transcribeError}</span>
               </div>
             )}
-            {(!customKey || transcribeError) && (
-              <div className="inline-key-setup">
-                <div className="inline-key-header">
-                  <span className="inline-key-title">Groq Cloud Whisper API Key</span>
-                  <a
-                    href="https://console.groq.com/keys"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="get-free-key-link"
-                  >
-                    Get free Groq key ↗
-                  </a>
-                </div>
-                <div className="inline-key-input-row">
-                  <input
-                    type="password"
-                    placeholder="Paste Groq API Key (gsk_...)"
-                    value={customKey}
-                    onChange={(e) => {
-                      setCustomKey(e.target.value);
-                      setTranscribeError("");
-                    }}
-                    className="inline-key-input"
-                  />
-                  <button
-                    type="button"
-                    className="inline-key-save-btn"
-                    onClick={() => {
-                      handleSaveApiKey();
-                      if (customKey && customKey.trim()) {
-                        handleTranscribeClick();
-                      }
-                    }}
-                  >
-                    Save & Transcribe
-                  </button>
-                </div>
-              </div>
-            )}
-            <button
-              className="primary-button transcribe-action-btn"
-              onClick={handleTranscribeClick}
-              disabled={isTranscribing}
-            >
-              <Sparkles size={16} />
-              <span>Transcribe with Swar AI</span>
-            </button>
+            <div className="empty-box-actions" style={{ display: "flex", gap: "10px", marginTop: "12px", flexWrap: "wrap" }}>
+              <button
+                className="primary-button transcribe-action-btn"
+                onClick={handleTranscribeClick}
+                disabled={isTranscribing}
+              >
+                <Sparkles size={16} />
+                <span>Transcribe with Swar AI</span>
+              </button>
+              <button
+                className="secondary-pill-button"
+                onClick={() => handleFetchOnlineLyrics(true)}
+                disabled={isFetchingLyrics}
+              >
+                <Search size={15} className={isFetchingLyrics ? "spin" : ""} />
+                <span>{isFetchingLyrics ? "Searching Server..." : "Search Server Lyrics"}</span>
+              </button>
+            </div>
           </div>
         )}
       </div>

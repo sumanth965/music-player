@@ -4,6 +4,7 @@
 // Ported from the original Fly.dev backend so audio no longer depends on it.
 
 import { VARIANTS, requestedVariant } from '../../shared/audio-variants.js';
+import { searchYouTube } from '../_lib/youtube.js';
 
 export { requestedVariant };
 
@@ -343,10 +344,27 @@ function candidatesFromHtml(html) {
 }
 
 async function collectCandidates(query) {
-  const viaApi = await innertubeSearch(query);
-  if (viaApi.length) return viaApi;
-  const html = await fetchYouTubeHtml(query);
-  return html ? candidatesFromHtml(html) : [];
+  try {
+    const viaApi = await innertubeSearch(query);
+    if (viaApi.length) return viaApi;
+  } catch {}
+  try {
+    const html = await fetchYouTubeHtml(query);
+    const fromHtml = html ? candidatesFromHtml(html) : [];
+    if (fromHtml.length) return fromHtml;
+  } catch {}
+  try {
+    const viaYt = await searchYouTube(query, 'videos');
+    if (viaYt?.videos?.length) {
+      return viaYt.videos.map(v => ({
+        videoId: v.videoId,
+        title: v.rawTitle || v.title || '',
+        channel: v.channel || '',
+        duration: v.duration || 0,
+      }));
+    }
+  } catch {}
+  return [];
 }
 
 export default async function handler(req, res) {
@@ -428,6 +446,18 @@ export default async function handler(req, res) {
     if (!deduped.length) {
       const relaxed = pickCandidate(rawPool, { artist, title, duration: desiredDuration, variant }, { relaxed: true });
       if (relaxed) deduped.push(relaxed);
+      else if (rawPool.length) {
+        const fallback = rawPool[0];
+        deduped.push({
+          videoId: fallback.videoId,
+          title: fallback.title,
+          channel: fallback.channel,
+          duration: fallback.duration,
+          score: 100,
+          confidence: 0.5,
+          query: fallback.query || queries[0],
+        });
+      }
     }
     const best = deduped[0];
     if (best?.videoId) {
@@ -448,7 +478,7 @@ export default async function handler(req, res) {
     }
 
     const payload = { videoId: null, source: 'youtube-search', query: queries[0], confidence: 0, candidates: [] };
-    writeCache(cacheKey, payload, 1000 * 60 * 5);
+    // Do not cache null videoId so a retry can immediately search again
     res.json(payload);
   } catch (err) {
     res.status(200).json({ videoId: null, source: 'youtube-search', error: String(err && err.message || err), confidence: 0, candidates: [] });
