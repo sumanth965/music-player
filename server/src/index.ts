@@ -338,6 +338,170 @@ app.get('/api/tempo', handleTempo);
 // ─── Secure AI Whisper Audio Transcription ────────────────────────────────────
 app.post('/api/transcribe', upload.single('file'), handleTranscribe);
 
+// ─── Root Status & Welcome Page ──────────────────────────────────────────────
+app.get('/', (req: Request, res: Response) => {
+  if (req.accepts('html')) {
+    res.type('html').send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Swar Audio Engine & API</title>
+  <style>
+    :root {
+      --bg: #140d07;
+      --card-bg: rgba(43, 27, 17, 0.85);
+      --border: rgba(234, 88, 12, 0.3);
+      --accent: #ea580c;
+      --accent-hover: #f97316;
+      --text: #FDFBF7;
+      --muted: #d4cdc3;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      background: radial-gradient(circle at 50% 20%, #2b1b11 0%, #140d07 100%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 36px;
+      max-width: 560px;
+      width: 100%;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+      backdrop-filter: blur(12px);
+    }
+    .logo-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .logo-icon {
+      font-size: 30px;
+    }
+    h1 {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(34, 197, 94, 0.15);
+      border: 1px solid rgba(34, 197, 94, 0.4);
+      color: #4ade80;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      margin-bottom: 16px;
+    }
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #4ade80;
+      box-shadow: 0 0 8px #4ade80;
+    }
+    p {
+      color: var(--muted);
+      line-height: 1.6;
+      font-size: 15px;
+      margin-bottom: 24px;
+    }
+    .cta-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 600;
+      font-size: 15px;
+      padding: 12px 24px;
+      border-radius: 9999px;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 14px rgba(234, 88, 12, 0.35);
+    }
+    .cta-btn:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+    }
+    .endpoints {
+      margin-top: 28px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+    }
+    .endpoints h3 {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+    .endpoint-tag {
+      display: inline-block;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px;
+      background: rgba(0,0,0,0.35);
+      border: 1px solid rgba(255,255,255,0.06);
+      padding: 4px 8px;
+      border-radius: 6px;
+      margin: 3px 4px 3px 0;
+      color: #fed7aa;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo-row">
+      <span class="logo-icon">🎵</span>
+      <h1>Swar Audio & API Engine</h1>
+    </div>
+    <div class="badge">
+      <span class="pulse-dot"></span>
+      Backend Service Operational (v3.2.0)
+    </div>
+    <p>
+      This is the dedicated REST API and streaming backend for <strong>Swar Music Player</strong>.
+      To listen to music, view synchronized lyrics, or practice singing, open the Swar Web Player:
+    </p>
+    <a href="https://swar-xdx8.onrender.com" class="cta-btn">
+      Open Swar Web Player &rarr;
+    </a>
+    <div class="endpoints">
+      <h3>Active API Endpoints</h3>
+      <span class="endpoint-tag">GET /api/health</span>
+      <span class="endpoint-tag">GET /api/status</span>
+      <span class="endpoint-tag">GET /api/music/search</span>
+      <span class="endpoint-tag">GET /api/lyrics/structured</span>
+      <span class="endpoint-tag">POST /api/transcribe</span>
+      <span class="endpoint-tag">GET /api/stream</span>
+    </div>
+  </div>
+</body>
+</html>`);
+    return;
+  }
+  res.json({
+    status: 'online',
+    app: 'Swar Music Player API',
+    version: '3.2.0',
+    frontend: 'https://swar-xdx8.onrender.com',
+    health: '/api/health',
+  });
+});
+
 // ─── Health Check ─────────────────────────────────────────────────────────────
 app.get('/api/health', (req: Request, res: Response) => {
   res.json({
