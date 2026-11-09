@@ -465,7 +465,7 @@ app.get('/', (req: Request, res: Response) => {
 <body>
   <div class="card">
     <div class="logo-row">
-      <span class="logo-icon">🎵</span>
+      <img src="https://swar-xdx8.onrender.com/icon_new.png" width="40" height="40" alt="Swar" style="object-fit: contain; filter: drop-shadow(0 0 10px rgba(234, 88, 12, 0.5));" />
       <h1>Swar Audio & API Engine</h1>
     </div>
     <div class="badge">

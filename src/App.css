@@ -224,11 +224,40 @@ svg {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  font-family: var(--font-serif);
-  font-size: 24px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: #2b1b11;
+  text-decoration: none;
+}
+.brand-icon-mark {
+  display: none;
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 8px rgba(242, 138, 50, 0.45));
+}
+.brand-full-logo {
+  display: block;
+  height: 32px;
+  width: auto;
+  max-width: 140px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 10px rgba(242, 138, 50, 0.35));
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+.brand:hover .brand-full-logo {
+  transform: scale(1.02);
+  filter: drop-shadow(0 0 14px rgba(242, 138, 50, 0.55));
+}
+.brand:hover .brand-icon-mark {
+  transform: scale(1.06);
+  filter: drop-shadow(0 0 12px rgba(242, 138, 50, 0.65));
+}
+.brand.is-collapsed .brand-full-logo,
+.sidebar-collapsed .sidebar .brand-full-logo {
+  display: none !important;
+}
+.brand.is-collapsed .brand-icon-mark,
+.sidebar-collapsed .sidebar .brand-icon-mark {
+  display: block !important;
+  margin: 0 auto;
 }
 .brand-period {
   color: var(--accent);
@@ -3859,8 +3888,15 @@ button:focus:not(:focus-visible) {
     margin-right: 0;
   }
   .sidebar-collapsed .sidebar .brand-word,
-  .sidebar-collapsed .sidebar .brand-period {
+  .sidebar-collapsed .sidebar .brand-period,
+  .sidebar-collapsed .sidebar .brand-full-logo {
     display: none !important;
+  }
+  .sidebar-collapsed .sidebar .brand-icon-mark {
+    display: block !important;
+    width: 34px;
+    height: 34px;
+    margin: 0 auto;
   }
   .sidebar-collapsed .sidebar-toggle-btn {
     width: 36px;

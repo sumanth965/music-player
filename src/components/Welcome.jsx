@@ -90,10 +90,11 @@ export default function Welcome({ onLeave }) {
           />
           <Motion.img
             ref={image}
-            src="/swar-welcome.svg?v=2"
+            src="/icon_new_2.png"
             alt="Swar"
-            width="466"
-            height="94"
+            width="360"
+            height="120"
+            style={{ maxHeight: "96px", width: "auto", objectFit: "contain", filter: "drop-shadow(0 0 24px rgba(234, 88, 12, 0.45))" }}
             onError={() => {
               setVisible(false);
             }}

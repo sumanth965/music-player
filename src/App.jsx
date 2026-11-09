@@ -106,6 +106,7 @@ const DEFAULT_RECENT_TRACKS = [
   { id: "let-it-be", title: "Let It Be", artist: "The Beatles", artwork: "/moods/romance.jpg" },
   { id: "heat-waves", title: "Heat Waves", artist: "Glass Animals", artwork: "/moods/sleep.jpg" },
 ];
+const DEFAULT_TRACK_ARTWORK = "/icon_new.png";
 import { detectLanguage } from "../shared/language.js";
 import { artworkLuma, extractColors } from "../shared/palette";
 import { requestedVariant } from "../shared/audio-variants.js";
@@ -316,19 +317,26 @@ const readName = () => {
 };
 const SEARCH_IDEAS = ["Bollywood", "Indie pop", "Late night R&B", "Synthwave", "Acoustic", "Lo-fi"];
 
-function Brand() {
+function Brand({ collapsed = false }) {
   return (
-    <span className="brand">
-      <span className="brand-mark">
-        <i />
-        <i />
-        <i />
-        <i />
-        <i />
-      </span>
-      <span className="brand-word">
-        Swar
-      </span>
+    <span className={`brand ${collapsed ? "is-collapsed" : ""}`}>
+      <img
+        src="/icon_new.png"
+        alt="Swar mark"
+        className="brand-icon-mark"
+        width="34"
+        height="34"
+        loading="eager"
+        decoding="async"
+      />
+      <img
+        src="/icon_new_2.png"
+        alt="Swar"
+        className="brand-full-logo"
+        height="32"
+        loading="eager"
+        decoding="async"
+      />
     </span>
   );
 }
@@ -2981,7 +2989,7 @@ export default function App() {
               aria-label={sidebarCollapsed ? "Expand sidebar" : "Swar home"}
               title={sidebarCollapsed ? "Expand sidebar" : "Swar home"}
             >
-              <Brand />
+              <Brand collapsed={sidebarCollapsed} />
             </button>
             <button
               className="sidebar-toggle-btn"
@@ -3165,7 +3173,7 @@ export default function App() {
                     <Menu size={22} />
                   </button>
                   <span className="mobile-brand">
-                    <Brand />
+                    <Brand collapsed={false} />
                   </span>
                 </div>
 
@@ -3713,7 +3721,7 @@ export default function App() {
                     </RevealSection>
                   )}
                   <footer className="browse-footer">
-                    <Brand />
+                    <Brand collapsed={false} />
                     <span>Stay a little longer.</span>
                     <span>Music is the whole point.</span>
                   </footer>
