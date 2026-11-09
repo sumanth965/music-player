@@ -43,6 +43,7 @@ export default function LyricsStudio({
 }) {
   const reduce = useReducedMotion();
   const [isFocusMode, setIsFocusMode] = useState(initialFocus);
+  const [showFixPanel, setShowFixPanel] = useState(false);
   const [scriptMode, setScriptMode] = useState("both"); // 'both' | 'native' | 'romanized'
   const [fontSize, setFontSize] = useState("normal"); // 'small' | 'normal' | 'large' | 'huge'
   const [userScrolled, setUserScrolled] = useState(false);
@@ -189,6 +190,50 @@ export default function LyricsStudio({
               Native
             </button>
           </div>
+
+          {/* Quick Real-Time Sync Offset Nudge */}
+          <div className="studio-offset-pill-group" title="Nudge lyrics timing earlier or later to match singing audio">
+            <button
+              type="button"
+              className="offset-mini-btn"
+              onClick={() => player.setLyricsOffset?.(Math.round(((player.lyricsOffset || 0) - 0.5) * 10) / 10)}
+              title="Shift lyrics 0.5s earlier"
+            >
+              -0.5s
+            </button>
+            <button
+              type="button"
+              className="offset-mini-btn"
+              onClick={() => player.setLyricsOffset?.(Math.round(((player.lyricsOffset || 0) - 0.1) * 10) / 10)}
+              title="Shift lyrics 0.1s earlier"
+            >
+              -0.1s
+            </button>
+            <button
+              type="button"
+              className="offset-val-btn"
+              onClick={() => player.setLyricsOffset?.(0)}
+              title="Click to reset offset to 0.0s"
+            >
+              Sync: {(player.lyricsOffset || 0) > 0 ? "+" : ""}{(player.lyricsOffset || 0).toFixed(1)}s
+            </button>
+            <button
+              type="button"
+              className="offset-mini-btn"
+              onClick={() => player.setLyricsOffset?.(Math.round(((player.lyricsOffset || 0) + 0.1) * 10) / 10)}
+              title="Shift lyrics 0.1s later"
+            >
+              +0.1s
+            </button>
+            <button
+              type="button"
+              className="offset-mini-btn"
+              onClick={() => player.setLyricsOffset?.(Math.round(((player.lyricsOffset || 0) + 0.5) * 10) / 10)}
+              title="Shift lyrics 0.5s later"
+            >
+              +0.5s
+            </button>
+          </div>
         </div>
 
         <div className="studio-toolbar-right">
@@ -206,6 +251,16 @@ export default function LyricsStudio({
               </button>
             ))}
           </div>
+
+          {/* Fix Lyrics / Options Action */}
+          <button
+            className={`studio-action-btn fix-action ${showFixPanel ? "is-active" : ""}`}
+            onClick={() => setShowFixPanel(!showFixPanel)}
+            title="Fix mismatched song lyrics, search alternative, paste text, or transcribe with AI Whisper"
+          >
+            <Sliders size={15} />
+            <span>{showFixPanel ? "Close Fix" : "Fix Lyrics"}</span>
+          </button>
 
           {/* Practice Looper Shortcut */}
           {onOpenPractice && (
@@ -256,7 +311,7 @@ export default function LyricsStudio({
       </div>
 
       {/* Chorus & Section Jump Chips Bar */}
-      {sections.length > 0 && (
+      {sections.length > 0 && !showFixPanel && (
         <div className="studio-sections-bar">
           <span className="sections-label">Jump to:</span>
           <div className="sections-scroll">
@@ -278,6 +333,46 @@ export default function LyricsStudio({
           </div>
         </div>
       )}
+
+      {/* Lyrics Correction, Custom Search, and Audio Transcription Drawer */}
+      <AnimatePresence>
+        {showFixPanel && (
+          <Motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="studio-fix-drawer-wrapper"
+            style={{
+              overflow: "hidden",
+              background: "rgba(18, 12, 8, 0.98)",
+              borderBottom: "1px solid rgba(242, 138, 50, 0.2)",
+            }}
+          >
+            <div style={{ padding: "16px 20px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                <div>
+                  <h4 style={{ margin: "0 0 4px", fontSize: "16px", color: "#ffffff" }}>
+                    Fix & Synchronize Lyrics
+                  </h4>
+                  <p style={{ margin: 0, fontSize: "12px", color: "#d1c2b4" }}>
+                    Search by verified title/artist, transcribe live audio with AI Whisper, adjust sync timing, or paste lyrics.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="secondary-pill-button sm-btn"
+                  onClick={() => setShowFixPanel(false)}
+                  style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                >
+                  <X size={14} />
+                  <span>Done</span>
+                </button>
+              </div>
+              <SongTextData player={player} onClose={() => setShowFixPanel(false)} />
+            </div>
+          </Motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Main Lyrics Teleprompter Stream */}
       <div

@@ -17,7 +17,7 @@ import { transcribeSongAudio } from "../lib/audioTranscription";
 import { getAudioFileForTrack } from "../lib/localAudioMetadata";
 import { buildApiUrl } from "../lib/api";
 
-export default function SongTextData({ player }) {
+export default function SongTextData({ player, onClose }) {
   const track = player.track;
   const tags = track?.tags || {};
   const [pasting, setPasting] = useState(false);
@@ -29,17 +29,27 @@ export default function SongTextData({ player }) {
   const [localStatus, setLocalStatus] = useState("");
   const [transcribeError, setTranscribeError] = useState("");
   const [isFetchingLyrics, setIsFetchingLyrics] = useState(false);
+  const [customTitle, setCustomTitle] = useState(track?.title || "");
+  const [customArtist, setCustomArtist] = useState(track?.artist || "");
+  const [showCustomSearch, setShowCustomSearch] = useState(false);
   const lrcInputRef = useRef(null);
   const hasAttemptedFetch = useRef(new Set());
 
-  const handleFetchOnlineLyrics = useCallback(async (isManual = false) => {
+  useEffect(() => {
+    if (track) {
+      setCustomTitle(track.title || "");
+      setCustomArtist(track.artist || "");
+    }
+  }, [track?.id, track?.title, track?.artist]);
+
+  const handleFetchOnlineLyrics = useCallback(async (isManual = false, overrideTitle, overrideArtist) => {
     if (!track) return;
     setIsFetchingLyrics(true);
     setTranscribeError("");
 
     try {
-      const rawTitle = track.title || "";
-      const rawArtist = track.artist || "";
+      const rawTitle = (overrideTitle !== undefined ? overrideTitle : track.title) || "";
+      const rawArtist = (overrideArtist !== undefined ? overrideArtist : track.artist) || "";
       const videoId = track.videoId || "";
       const duration = track.duration || 0;
 
@@ -81,6 +91,7 @@ export default function SongTextData({ player }) {
       if (found && found.lines && found.lines.length > 0) {
         track.lyrics = found;
         player.applyLyrics?.(found);
+        if (onClose) onClose();
       } else if (isManual) {
         setTranscribeError(
           "No synchronized text found in online databases for this title. Click 'Transcribe with Swar AI' to listen and generate lyrics automatically."
@@ -93,7 +104,7 @@ export default function SongTextData({ player }) {
     } finally {
       setIsFetchingLyrics(false);
     }
-  }, [track, player]);
+  }, [track, player, onClose]);
 
   // Attempt automatic online lyrics lookup when mounting for a song without lyrics
   useEffect(() => {
@@ -252,6 +263,73 @@ export default function SongTextData({ player }) {
             {track.album ? ` · ${track.album}` : ""}
           </p>
         </div>
+      </div>
+
+      {/* Search Alternative / Clean Song Title Card */}
+      <div className="custom-search-container" style={{
+        background: "rgba(255, 255, 255, 0.04)",
+        border: "1px solid rgba(255, 255, 255, 0.08)",
+        borderRadius: "14px",
+        padding: "16px",
+        marginBottom: "20px"
+      }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }} onClick={() => setShowCustomSearch(!showCustomSearch)}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <Search size={16} style={{ color: "var(--accent, #ea580c)" }} />
+            <strong style={{ fontSize: "14px", color: "var(--text-primary, #ffffff)" }}>Fix Mismatched Lyrics (Search by Exact Title & Artist)</strong>
+          </div>
+          <button type="button" className="collapse-toggle-btn" style={{ background: "transparent", border: 0, color: "var(--accent, #ea580c)", cursor: "pointer", display: "flex", alignItems: "center", gap: "4px", fontSize: "12px" }}>
+            {showCustomSearch ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            <span>{showCustomSearch ? "Close" : "Search Alternative"}</span>
+          </button>
+        </div>
+        {showCustomSearch && (
+          <div style={{ marginTop: "14px", display: "flex", flexDirection: "column", gap: "10px" }}>
+            <p style={{ margin: "0 0 6px", fontSize: "12.5px", color: "var(--text-secondary, #b3a598)", lineHeight: "1.5" }}>
+              If the YouTube video title contains extra text (e.g. &ldquo;Official 4K Video&rdquo;, &ldquo;Lyrics&rdquo;, &ldquo;Remix&rdquo;, or channel names), type the clean song name and singer below to fetch the exact verified lyrics:
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: "10px" }}>
+              <input
+                type="text"
+                placeholder="Song Title (e.g. Perfect)"
+                value={customTitle}
+                onChange={(e) => setCustomTitle(e.target.value)}
+                style={{
+                  background: "rgba(0, 0, 0, 0.35)",
+                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  borderRadius: "8px",
+                  padding: "8px 12px",
+                  color: "#ffffff",
+                  fontSize: "13px"
+                }}
+              />
+              <input
+                type="text"
+                placeholder="Artist Name (e.g. Ed Sheeran)"
+                value={customArtist}
+                onChange={(e) => setCustomArtist(e.target.value)}
+                style={{
+                  background: "rgba(0, 0, 0, 0.35)",
+                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  borderRadius: "8px",
+                  padding: "8px 12px",
+                  color: "#ffffff",
+                  fontSize: "13px"
+                }}
+              />
+              <button
+                type="button"
+                className="primary-button"
+                onClick={() => handleFetchOnlineLyrics(true, customTitle, customArtist)}
+                disabled={isFetchingLyrics || !customTitle.trim()}
+                style={{ padding: "8px 18px", fontSize: "13px", display: "flex", alignItems: "center", gap: "6px" }}
+              >
+                {isFetchingLyrics ? <RefreshCw size={13} className="spin" /> : <Search size={13} />}
+                <span>Search</span>
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* AI Audio-to-Text Transcription Section */}

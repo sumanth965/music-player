@@ -63,16 +63,37 @@ async function lrclib(track, signal) {
 }
 // Fuzzy catalogue search: tolerant of album and small duration differences, never of a different song.
 async function lrclibSearch(track, signal) {
+  const artistMatches = (itemArtist, trackArtist) => {
+    const mItem = match(itemArtist);
+    const mTrack = match(trackArtist);
+    return mItem === mTrack || (mItem && mTrack && (mItem.includes(mTrack) || mTrack.includes(mItem)));
+  };
+
   const data = await get(urlFor('https://lrclib.net/api/search', { track_name: track.title, artist_name: track.artist }),signal);
-  const candidates = (Array.isArray(data) ? data : []).filter(item => item && match(item.trackName) === match(track.title) && match(item.artistName) === match(track.artist)
+  const candidates = (Array.isArray(data) ? data : []).filter(item => item && match(item.trackName) === match(track.title) && artistMatches(item.artistName, track.artist)
     && (!track.duration || Math.abs(Number(item.duration)-track.duration) <= 5));
   const hit = candidates.find(item => item.syncedLyrics) || candidates[0];
   if (hit) return parseTrack(hit,'LRCLib',track.duration,track);
 
   // Fallback for remixes/covers/DJ edits (e.g. Blasterjaxx - Unfaithful): search by track title
+  // But never accept a completely unrelated song by a different artist with different duration.
   try {
     const titleData = await get(urlFor('https://lrclib.net/api/search', { track_name: track.title }), signal);
-    const titleCandidates = (Array.isArray(titleData) ? titleData : []).filter(item => item && match(item.trackName) === match(track.title) && item.syncedLyrics);
+    const titleCandidates = (Array.isArray(titleData) ? titleData : [])
+      .filter(item => item && match(item.trackName) === match(track.title) && item.syncedLyrics)
+      .filter(item => {
+        const hasArtist = artistMatches(item.artistName, track.artist);
+        const hasDuration = track.duration && Math.abs(Number(item.duration) - track.duration) <= 5;
+        return hasArtist || hasDuration;
+      })
+      .sort((a, b) => {
+        const aArt = artistMatches(a.artistName, track.artist) ? -1 : 0;
+        const bArt = artistMatches(b.artistName, track.artist) ? -1 : 0;
+        if (aArt !== bArt) return aArt - bArt;
+        const aDur = track.duration ? Math.abs(Number(a.duration) - track.duration) : 0;
+        const bDur = track.duration ? Math.abs(Number(b.duration) - track.duration) : 0;
+        return aDur - bDur;
+      });
     if (titleCandidates[0]) return parseTrack(titleCandidates[0], 'LRCLib', track.duration, track);
   } catch {}
   return null;
@@ -138,10 +159,20 @@ export async function fetchLyrics(track) {
   try {
     const best = await race(track, providers, controller.signal);
     const cleaned = rank(best) < 2 && !controller.signal.aborted ? cleanTrack(track) : null;
-    if (!cleaned) return best;
-    // The video-bound SimpMusic lookup already ran; retry the text-matched providers.
-    const retry = await race(cleaned, [better,bini,plus,lrclib,lrclibSearch,kugou,netease], controller.signal);
-    return rank(retry) > rank(best) ? retry : best;
+    let currentBest = best;
+    if (cleaned) {
+      // The video-bound SimpMusic lookup already ran; retry the text-matched providers.
+      const retry = await race(cleaned, [better,bini,plus,lrclib,lrclibSearch,kugou,netease], controller.signal);
+      if (rank(retry) > rank(currentBest)) currentBest = retry;
+    }
+    // If still no timed lyrics and duration was specified, relax duration.
+    // YouTube music videos frequently include dialogue/intros that make video duration differ from album track.
+    if (rank(currentBest) < 2 && track.duration > 0 && !controller.signal.aborted) {
+      const relaxed = { ...(cleaned || track), duration: 0 };
+      const relaxedRetry = await race(relaxed, [better,bini,plus,lrclib,lrclibSearch,kugou,netease], controller.signal);
+      if (rank(relaxedRetry) > rank(currentBest)) currentBest = relaxedRetry;
+    }
+    return currentBest;
   } finally {
     clearTimeout(timeout);
     controller.abort();
