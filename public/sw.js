@@ -1,6 +1,6 @@
-const CACHE = 'swar-shell-v2';
+const CACHE = 'swar-shell-v4';
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(['/', '/icon_new.png', '/icon_new_2.png', '/favicon-32.png', '/favicon.ico', '/apple-touch-icon.png', '/manifest.webmanifest'])));
+  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(['/', '/swar_mark_transparent.svg', '/swar_icon_beautified.svg', '/swar_icon_512.png', '/swar_icon_192.png', '/favicon.svg', '/favicon-32.png', '/favicon.ico', '/apple-touch-icon.png', '/manifest.webmanifest'])));
   self.skipWaiting();
 });
 self.addEventListener('activate', event => {

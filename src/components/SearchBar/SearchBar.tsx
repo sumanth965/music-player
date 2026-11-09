@@ -1,4 +1,4 @@
-// ─── SearchBar Component ──────────────────────────────────────────────────────
+ // ─── SearchBar Component ──────────────────────────────────────────────────────
 
 import React, { useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -23,7 +23,7 @@ interface SearchBarProps {
   autoFocus?: boolean;
 }
 
-const DEFAULT_TRACK_ARTWORK = "/icon_new.png";
+const DEFAULT_TRACK_ARTWORK = "/swar_icon_512.png";
 
 const SearchBar: React.FC<SearchBarProps> = ({
   query,

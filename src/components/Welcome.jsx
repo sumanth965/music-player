@@ -9,9 +9,9 @@ const INK = 0.96;
 
 // Where the wordmark should fly to: the app's own brand mark, wherever it shows
 // (the sidebar on large screens, the header on phones). Null when none is visible.
-function brandTarget(image) {
-  if (!image) return null;
-  const from = image.getBoundingClientRect();
+function brandTarget(element) {
+  if (!element) return null;
+  const from = element.getBoundingClientRect();
   const brand = [...document.querySelectorAll(".brand-button .brand, .mobile-brand .brand")].find((node) => {
     const box = node.getBoundingClientRect();
     return box.width > 20 && box.height > 8 && getComputedStyle(node).visibility !== "hidden";
@@ -21,7 +21,7 @@ function brandTarget(image) {
   return {
     x: to.left + to.width / 2 - (from.left + from.width / 2),
     y: to.top + to.height / 2 - (from.top + from.height / 2),
-    scale: to.width / (from.width * INK),
+    scale: to.width / from.width,
   };
 }
 
@@ -31,7 +31,7 @@ function brandTarget(image) {
 export default function Welcome({ onLeave }) {
   const [visible, setVisible] = useState(shouldWelcome);
   const [flight, setFlight] = useState(null);
-  const image = useRef(null);
+  const heroRef = useRef(null);
 
   useEffect(() => {
     if (!visible) return;
@@ -46,7 +46,7 @@ export default function Welcome({ onLeave }) {
     const leave = () => {
       if (leaving) return;
       leaving = true;
-      setFlight(brandTarget(image.current));
+      setFlight(brandTarget(heroRef.current));
       requestAnimationFrame(() => setVisible(false));
     };
     const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -54,7 +54,7 @@ export default function Welcome({ onLeave }) {
       if (event.matches) leave();
     };
     // The writing ends at about 1.6 s; the word holds a moment before it leaves.
-    const timer = window.setTimeout(leave, 2000);
+    const timer = window.setTimeout(leave, 2200);
     window.addEventListener("pointerdown", leave, { passive: true });
     window.addEventListener("keydown", leave);
     preference.addEventListener("change", onPreference);
@@ -88,17 +88,10 @@ export default function Welcome({ onLeave }) {
             animate={{ opacity: 1, scale: 1, transition: { duration: 1.6, ease: EASE } }}
             exit={{ opacity: 0, scale: 1.25, transition: { duration: 0.9, ease: EASE } }}
           />
-          <Motion.img
-            ref={image}
-            src="/icon_new_2.png"
-            alt="Swar"
-            width="520"
-            height="173"
-            className="welcome-logo-img"
-            onError={() => {
-              setVisible(false);
-            }}
-            initial={{ opacity: 0, y: 10, scale: 0.97, filter: "blur(6px)" }}
+          <Motion.div
+            ref={heroRef}
+            className="welcome-brand-hero"
+            initial={{ opacity: 0, y: 14, scale: 0.94, filter: "blur(6px)" }}
             animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)", transition: { duration: 0.9, ease: EASE } }}
             exit={
               flight
@@ -106,7 +99,19 @@ export default function Welcome({ onLeave }) {
                   { x: flight.x, y: flight.y, scale: flight.scale, opacity: [1, 1, 0], transition: { duration: 0.95, ease: GLIDE, opacity: { duration: 0.95, times: [0, 0.78, 1] } } }
                 : { opacity: 0, y: -14, scale: 1.04, filter: "blur(8px)", transition: { duration: 0.7, ease: EASE } }
             }
-          />
+          >
+            <img
+              src="/swar_mark_transparent.svg"
+              alt="Swar"
+              width="130"
+              height="130"
+              className="welcome-logo-img"
+              onError={() => {
+                setVisible(false);
+              }}
+            />
+            <span className="welcome-word">Swar</span>
+          </Motion.div>
         </Motion.div>
       )}
     </AnimatePresence>

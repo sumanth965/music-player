@@ -106,7 +106,7 @@ const DEFAULT_RECENT_TRACKS = [
   { id: "let-it-be", title: "Let It Be", artist: "The Beatles", artwork: "/moods/romance.jpg" },
   { id: "heat-waves", title: "Heat Waves", artist: "Glass Animals", artwork: "/moods/sleep.jpg" },
 ];
-const DEFAULT_TRACK_ARTWORK = "/icon_new.png";
+const DEFAULT_TRACK_ARTWORK = "/swar_icon_512.png";
 import { detectLanguage } from "../shared/language.js";
 import { artworkLuma, extractColors } from "../shared/palette";
 import { requestedVariant } from "../shared/audio-variants.js";
@@ -184,7 +184,9 @@ function Cover({ track, className = "", eager = false }) {
           loading={eager ? "eager" : "lazy"}
           decoding="async"
           onError={(e) => {
-            e.currentTarget.style.visibility = "hidden";
+            e.currentTarget.onerror = null;
+            e.currentTarget.src = DEFAULT_TRACK_ARTWORK;
+            e.currentTarget.removeAttribute("srcset");
           }}
         />
       ) : (
@@ -321,22 +323,17 @@ function Brand({ collapsed = false }) {
   return (
     <span className={`brand ${collapsed ? "is-collapsed" : ""}`}>
       <img
-        src="/icon_new.png"
-        alt="Swar mark"
+        src="/swar_mark_transparent.svg"
+        alt="Swar emblem"
         className="brand-icon-mark"
         width="34"
         height="34"
         loading="eager"
         decoding="async"
       />
-      <img
-        src="/icon_new_2.png"
-        alt="Swar"
-        className="brand-full-logo"
-        height="32"
-        loading="eager"
-        decoding="async"
-      />
+      <span className="brand-word">
+        Swar
+      </span>
     </span>
   );
 }

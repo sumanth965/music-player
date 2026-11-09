@@ -227,31 +227,34 @@ svg {
   text-decoration: none;
 }
 .brand-icon-mark {
-  display: none;
-  width: 36px;
-  height: 36px;
-  object-fit: contain;
-  filter: drop-shadow(0 0 10px rgba(242, 138, 50, 0.5));
-}
-.brand-full-logo {
   display: block;
-  height: 36px;
-  width: auto;
-  max-width: 155px;
+  width: 34px;
+  height: 34px;
   object-fit: contain;
-  filter: drop-shadow(0 0 12px rgba(242, 138, 50, 0.4));
+  filter: drop-shadow(0 0 10px rgba(242, 138, 50, 0.55));
   transition: transform 0.2s ease, filter 0.2s ease;
 }
-.brand:hover .brand-full-logo {
-  transform: scale(1.02);
-  filter: drop-shadow(0 0 14px rgba(242, 138, 50, 0.55));
+.brand-word {
+  font-family: var(--font-serif);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  line-height: 1;
+  transition: color 0.2s ease, opacity 0.2s ease;
+}
+.sidebar .brand-word {
+  color: #ffffff;
 }
 .brand:hover .brand-icon-mark {
   transform: scale(1.06);
-  filter: drop-shadow(0 0 12px rgba(242, 138, 50, 0.65));
+  filter: drop-shadow(0 0 14px rgba(242, 138, 50, 0.75));
 }
-.brand.is-collapsed .brand-full-logo,
-.sidebar-collapsed .sidebar .brand-full-logo {
+.brand:hover .brand-word {
+  color: #f79d5c;
+}
+.brand.is-collapsed .brand-word,
+.sidebar-collapsed .sidebar .brand-word {
   display: none !important;
 }
 .brand.is-collapsed .brand-icon-mark,
@@ -5061,19 +5064,42 @@ button {
   background: radial-gradient(circle at 50% 50%, #150f0a 0%, #0c0806 100%);
   overflow: hidden;
 }
-.swar-welcome img,
+.welcome-brand-hero {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  user-select: none;
+}
 .welcome-logo-img {
   position: relative;
-  width: min(85vw, 540px);
-  max-width: 540px;
-  height: auto;
+  width: min(28vw, 130px);
+  height: min(28vw, 130px);
   object-fit: contain;
-  filter: drop-shadow(0 0 35px rgba(234, 88, 12, 0.55)) drop-shadow(0 14px 45px rgba(0, 0, 0, 0.8));
+  filter: drop-shadow(0 0 28px rgba(245, 158, 11, 0.6)) drop-shadow(0 8px 30px rgba(0, 0, 0, 0.7));
+}
+.welcome-word {
+  font-family: var(--font-serif);
+  font-size: min(16vw, 76px);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: linear-gradient(135deg, #FFF1BC 0%, #FFCB55 35%, #FF9319 75%, #E0600B 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 24px rgba(245, 158, 11, 0.45));
 }
 @media (max-width: 760px) {
-  .swar-welcome img,
+  .welcome-brand-hero {
+    gap: 12px;
+  }
   .welcome-logo-img {
-    width: min(88vw, 360px);
+    width: min(24vw, 84px);
+    height: min(24vw, 84px);
+  }
+  .welcome-word {
+    font-size: min(14vw, 48px);
   }
 }
 .welcome-glow {
