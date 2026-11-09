@@ -140,6 +140,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
         {showSuggestionDrop && (
           <motion.div
             className="sbar__drop"
+            data-lenis-prevent
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
@@ -184,6 +185,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
         {showHistoryDrop && (
           <motion.div
             className="sbar__drop"
+            data-lenis-prevent
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}

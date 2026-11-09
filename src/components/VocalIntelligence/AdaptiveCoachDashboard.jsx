@@ -61,7 +61,7 @@ export default function AdaptiveCoachDashboard({
   };
 
   return (
-    <div className="adaptive-coach-dashboard">
+    <div className="adaptive-coach-dashboard" data-lenis-prevent>
       {/* Header Banner */}
       <div className="coach-header">
         <div className="coach-title-block">

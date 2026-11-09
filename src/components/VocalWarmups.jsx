@@ -184,7 +184,7 @@ export default function VocalWarmups({ onClose }) {
   const accuracyPct = totalAttempts > 0 ? Math.min(100, Math.round((hitScore / totalAttempts) * 100)) : 0;
 
   return (
-    <div className="vocal-warmups-container">
+    <div className="vocal-warmups-container" data-lenis-prevent>
       <div className="warmups-header">
         <div className="warmups-title-block">
           <Sparkles size={20} className="warmups-icon-glow" />

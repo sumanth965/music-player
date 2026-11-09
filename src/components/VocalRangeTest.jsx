@@ -130,7 +130,7 @@ export default function VocalRangeTest({ onClose }) {
   const octaves = (semitones / 12).toFixed(1);
 
   return (
-    <div className="vocal-range-container">
+    <div className="vocal-range-container" data-lenis-prevent>
       <div className="range-header">
         <Sparkles size={20} className="range-icon-pulse" />
         <div>

@@ -112,7 +112,8 @@ import { artworkLuma, extractColors } from "../shared/palette";
 import { requestedVariant } from "../shared/audio-variants.js";
 import { artworkAt, artworkSrcSet } from "./lib/artwork";
 import { qualityLabel } from "./lib/audio-format";
-import { jumpTo, startSmoothScroll } from "./lib/smooth-scroll";
+import { ReactLenis, useLenis } from "lenis/react";
+import { jumpTo, setLenisInstance } from "./lib/smooth-scroll";
 import { homeSeeds, onRepeat, recordLike, rotateForDay, tasteFilter } from "./lib/listening";
 import { lineSpan, peakMoments, splitBackingVocals } from "./lib/lyrics";
 import { bestMoments } from "./lib/best-part";
@@ -1347,6 +1348,7 @@ function Lyrics({ player }) {
       <Motion.div key="lyrics" className="lyrics-layout" {...fade}>
         <div
           className="lyrics-scroll"
+          data-lenis-prevent
           ref={(node) => {
             container.current = node;
             setMountedList(node);
@@ -1508,6 +1510,7 @@ function Sheet({ title, close, back, children }) {
       }}
       ref={ref}
       className={`sheet ${isPresent ? "" : "is-closing"}`}
+      data-lenis-prevent
       onCancel={(event) => {
         event.preventDefault();
         close();
@@ -1702,9 +1705,46 @@ function DjStatus({ player }) {
   );
 }
 
+function LenisSync({ revealed }) {
+  const lenis = useLenis();
+
+  useEffect(() => {
+    if (lenis) {
+      setLenisInstance(lenis);
+      if (revealed) {
+        lenis.start();
+      } else {
+        lenis.stop();
+      }
+    }
+    return () => {
+      setLenisInstance(null);
+    };
+  }, [lenis, revealed]);
+
+  return null;
+}
+
 export default function App() {
   const player = usePlayer();
   const _reduce = useReducedMotion();
+  const lenisRef = useRef(null);
+  const lenisOptions = useMemo(
+    () => ({
+      lerp: 0.1,
+      wheelMultiplier: 0.95,
+      touchMultiplier: 1.0,
+      smoothWheel: true,
+      syncTouch: false,
+      autoToggle: true,
+      respectReducedMotion: true,
+      prevent: (node) =>
+        !!node.closest?.(
+          "dialog, .sheet, .sidebar, .lyrics-scroll, .studio-lyrics-viewport, .queue-modal, .practice-mode-container, .adaptive-coach-dashboard, .vocal-warmups-container, .vocal-range-container, .practice-journal-container, .singalong-game-container, iframe, [data-lenis-prevent]",
+        ),
+    }),
+    [],
+  );
   // Cursor spotlight: a soft light follows a fine pointer across the card or row it
   // is over. One listener; only the hovered element repaints, and only while hovered.
   useEffect(() => {
@@ -1797,8 +1837,6 @@ export default function App() {
     }
   }, [isDark]);
   const reveal = useCallback(() => setRevealed(true), []);
-  // Smooth wheel scrolling joins once the app is on screen.
-  useEffect(() => { if (revealed) startSmoothScroll(); }, [revealed]);
   const [searchType, setSearchType] = useState("all");
   const [searchData, setSearchData] = useState(EMPTY_SEARCH);
   const results = searchData.songs;
@@ -2877,7 +2915,7 @@ export default function App() {
   };
 
   const renderStudio = () => (
-    <div className="studio-page-layout">
+    <div className="studio-page-layout" data-lenis-prevent>
       <div className="studio-page-header">
         <div>
           <p className="sheet-description" style={{ margin: 0 }}>AI Teleprompter & Vocal Studio</p>
@@ -2993,19 +3031,22 @@ export default function App() {
   );
 
   return (
-    <MotionConfig reducedMotion="user">
-      <Welcome onLeave={reveal} />
-      <div
-        className={`swar-app ${revealed ? "" : "is-veiled"} ${sidebarCollapsed ? "sidebar-collapsed" : ""} ${isDark ? "dark-theme" : ""} ${immersive ? "is-immersive" : ""} ${video && immersive ? "has-video" : ""} ${video && showLyrics ? "video-with-lyrics" : ""} ${ambientVideo ? "motion-art" : ""} ${focused ? "is-focus" : ""}`}
-        style={{ "--art-color": color }}
-      >
+    <ReactLenis ref={lenisRef} root options={lenisOptions}>
+      <LenisSync revealed={revealed} />
+      <MotionConfig reducedMotion="user">
+        <Welcome onLeave={reveal} />
         <div
-          aria-hidden="true"
-          className={`video-surface ${(video || ambientVideo) && immersive ? "is-visible" : ""}`}
+          className={`swar-app ${revealed ? "" : "is-veiled"} ${sidebarCollapsed ? "sidebar-collapsed" : ""} ${isDark ? "dark-theme" : ""} ${immersive ? "is-immersive" : ""} ${video && immersive ? "has-video" : ""} ${video && showLyrics ? "video-with-lyrics" : ""} ${ambientVideo ? "motion-art" : ""} ${focused ? "is-focus" : ""}`}
+          style={{ "--art-color": color }}
         >
-          <div id="youtube-player" />
-        </div>
-        <aside className="sidebar">
+          <div
+            aria-hidden="true"
+            className={`video-surface ${(video || ambientVideo) && immersive ? "is-visible" : ""}`}
+            data-lenis-prevent
+          >
+            <div id="youtube-player" />
+          </div>
+          <aside className="sidebar" data-lenis-prevent>
           <div className="sidebar-brand-row">
             <button
               className="brand-button"
@@ -4800,5 +4841,6 @@ export default function App() {
         </AnimatePresence>
       </div>
     </MotionConfig>
+  </ReactLenis>
   );
 }

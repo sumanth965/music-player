@@ -1,34 +1,22 @@
-// Smooth wheel scrolling for the page (Lenis), loaded after first paint so it
-// never delays the app. Only where it helps: a mouse or trackpad, without
-// reduced motion. Touch keeps the platform's own native scrolling. Lenis stops
-// itself whenever the page is scroll-locked behind a sheet (autoToggle reads
-// the root's overflow), and nested scrollers (lyrics, shelves, queues, sheets)
-// keep their own wheel.
-let lenis = null;
-let loading = null;
+// Smooth wheel scrolling for the page (Lenis).
+// Touch keeps the platform's own native 120Hz scrolling. Lenis auto-toggles
+// whenever the page is scroll-locked behind a sheet, and nested scrollers
+// (lyrics, shelves, queues, studio, sidebar) keep their own native wheel.
 
-export function startSmoothScroll() {
-  if (lenis || loading || typeof window === 'undefined') return;
-  const media = query => window.matchMedia?.(query).matches;
-  if (media('(prefers-reduced-motion: reduce)') || !media('(pointer: fine)')) return;
-  loading = import('lenis').then(({ default: Lenis }) => {
-    lenis = new Lenis({
-      autoRaf: true,
-      autoToggle: true,
-      allowNestedScroll: true,
-      lerp: 0.11,
-      wheelMultiplier: 0.95,
-      smoothWheel: true,
-      syncTouch: false,
-      prevent: node => !!node.closest?.('dialog, .sheet, .sidebar, .lyrics-scroll, .studio-lyrics-viewport, .queue-modal, .practice-mode-container, .adaptive-coach-dashboard, .vocal-warmups-container, .vocal-range-container, .practice-journal-container, .singalong-game-container, [data-lenis-prevent]'),
-    });
-  }).catch(() => { /* Native scrolling stays. */ }).finally(() => { loading = null; });
+let activeLenis = null;
+
+export function setLenisInstance(instance) {
+  activeLenis = instance;
 }
 
-// Moves the page at once, also cancelling any smooth scroll still under way.
+export function getLenisInstance() {
+  return activeLenis;
+}
+
+// Moves the page at once, cancelling any smooth scroll still under way.
 export function jumpTo(top) {
-  if (lenis) lenis.scrollTo(top, { immediate: true, force: true });
-  else window.scrollTo({ top, behavior: 'instant' });
+  if (activeLenis) activeLenis.scrollTo(top, { immediate: true, force: true });
+  else if (typeof window !== 'undefined') window.scrollTo({ top, behavior: 'instant' });
 }
 
 // Smoothly scrolls to target offset respecting prefers-reduced-motion
@@ -39,8 +27,8 @@ export function smoothScrollTo(top, { duration = 0.8, onComplete } = {}) {
     onComplete?.();
     return;
   }
-  if (lenis) {
-    lenis.scrollTo(top, { duration, onComplete });
+  if (activeLenis) {
+    activeLenis.scrollTo(top, { duration, onComplete });
   } else if (typeof window !== 'undefined') {
     window.scrollTo({ top, behavior: 'smooth' });
     if (onComplete) setTimeout(onComplete, Math.round(duration * 1000));

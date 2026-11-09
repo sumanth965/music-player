@@ -48,7 +48,7 @@ export default function PracticeJournal({ onSelectSong }) {
   const progress = analyzeVocalProgress(sessions, vocalRange);
 
   return (
-    <div className="practice-journal-container">
+    <div className="practice-journal-container" data-lenis-prevent>
       <div className="journal-header">
         <div className="journal-title-block">
           <Calendar size={20} className="journal-icon-glow" />

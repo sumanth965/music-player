@@ -150,7 +150,7 @@ export default function PracticeMode({
   );
 
   return (
-    <div className="practice-mode-container">
+    <div className="practice-mode-container" data-lenis-prevent>
       {/* Top Header */}
       <div className="practice-header">
         <div className="practice-header-left">

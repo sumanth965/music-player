@@ -395,6 +395,7 @@ export default function LyricsStudio({
       {/* Main Lyrics Teleprompter Stream */}
       <div
         className="studio-lyrics-viewport"
+        data-lenis-prevent
         ref={containerRef}
         onScroll={handleScroll}
         onWheel={() => {

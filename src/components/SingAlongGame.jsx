@@ -219,7 +219,7 @@ export default function SingAlongGame({
   };
 
   return (
-    <div className="singalong-game-container">
+    <div className="singalong-game-container" data-lenis-prevent>
       {/* Top HUD Bar */}
       <div className="game-hud">
         <div className="hud-left">
