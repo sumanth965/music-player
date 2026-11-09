@@ -1199,7 +1199,9 @@ function Lyrics({ player }) {
   const interlude = { clock: player.clock, offset, start: gapStart, end: gapEnd };
   const stopScroll = () => scrolling.current?.stop();
   const { seek } = player;
+  const idleResumeTimer = useRef(null);
   const seekToLine = useCallback((time) => {
+    if (idleResumeTimer.current) clearTimeout(idleResumeTimer.current);
     seek(Math.max(0, time - offset));
     setFollowing(true);
   }, [seek, offset]);
@@ -1207,16 +1209,16 @@ function Lyrics({ player }) {
     const box = container.current;
     const target = activeRef.current;
     if (!following || !box || !target || !present) return;
-    const top = Math.max(0, target.offsetTop + target.offsetHeight / 2 - box.clientHeight * 0.4);
+    const top = Math.max(0, target.offsetTop + target.offsetHeight / 2 - box.clientHeight * 0.38);
     stopScroll();
     if (reduce) {
       box.scrollTop = top;
       return;
     }
-    // A long, eased glide replaces the browser's short smooth-scroll jump.
+    // Fluid, responsive spring-like glide to keep the active line at optical center.
     scrolling.current = animate(box.scrollTop, top, {
-      duration: 1.6,
-      ease: [0.45, 0.05, 0.1, 1],
+      duration: 0.75,
+      ease: [0.22, 1, 0.36, 1],
       onUpdate: (value) => {
         box.scrollTop = value;
       },
@@ -1284,10 +1286,19 @@ function Lyrics({ player }) {
     return () => cancelAnimationFrame(frame);
   }, [mountedList, getPlaybackTime, lines, lyricsOffset, lyricsLoading, timed, reduce, present]);
   const [showMetadata, setShowMetadata] = useState(false);
-  const releaseFollow = () => {
+  const releaseFollow = useCallback(() => {
     stopScroll();
     setFollowing(false);
-  };
+    if (idleResumeTimer.current) clearTimeout(idleResumeTimer.current);
+    idleResumeTimer.current = setTimeout(() => {
+      setFollowing(true);
+    }, 3800);
+  }, []);
+  useEffect(() => {
+    return () => {
+      if (idleResumeTimer.current) clearTimeout(idleResumeTimer.current);
+    };
+  }, []);
   let content;
   if (player.isTranscribingAudio)
     content = (
@@ -1397,7 +1408,10 @@ function Lyrics({ player }) {
               <Motion.button
                 key="follow"
                 className="small-pill"
-                onClick={() => setFollowing(true)}
+                onClick={() => {
+                  if (idleResumeTimer.current) clearTimeout(idleResumeTimer.current);
+                  setFollowing(true);
+                }}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 8 }}
@@ -1999,20 +2013,33 @@ export default function App() {
       setTimeout(scrollToMood, 80);
     }
   }, [moodResult, scrollToMood]);
-  // Each screen starts at its top: a page never inherits scroll, and the player opens
-  // at its top and gives the page back where it was. The position is tracked from
-  // scroll events, so opening and closing force no layout when nothing is scrolled.
+  // Fluid page scroll state and position cache: navigating between views preserves
+  // read position where appropriate without resetting to the top unnecessarily.
   const scrollY = useRef(0);
   const pageScroll = useRef(0);
+  const pagePositions = useRef(new Map());
   useEffect(() => {
     const track = () => { scrollY.current = window.scrollY; };
     window.addEventListener("scroll", track, { passive: true });
     return () => window.removeEventListener("scroll", track);
   }, []);
+  const pageKey = `${page}:${collection ? String(collection.id || collection.type || "") : ""}`;
+  const prevPageKey = useRef(pageKey);
   useEffect(() => {
-    pageScroll.current = 0;
-    if (scrollY.current) jumpTo(0);
-  }, [page, collection]);
+    if (prevPageKey.current && prevPageKey.current !== pageKey) {
+      pagePositions.current.set(prevPageKey.current, scrollY.current);
+    }
+    prevPageKey.current = pageKey;
+
+    const saved = pagePositions.current.get(pageKey);
+    if (typeof saved === "number" && saved > 0) {
+      pageScroll.current = saved;
+      requestAnimationFrame(() => jumpTo(saved));
+    } else {
+      pageScroll.current = 0;
+      if (scrollY.current) jumpTo(0);
+    }
+  }, [pageKey]);
   useEffect(() => {
     const metaTheme = document.querySelector('meta[name="theme-color"]');
     const darkActive = isDark || immersive;

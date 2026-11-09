@@ -52,6 +52,7 @@ export default function LyricsStudio({
   const activeLineRef = useRef(null);
   const scrollAnimRef = useRef(null);
   const userScrollTimeoutRef = useRef(null);
+  const isProgrammaticScroll = useRef(false);
 
   // Parse lyrics with smart chorus and word timings
   const parsedLyrics = useMemo(() => {
@@ -79,20 +80,28 @@ export default function LyricsStudio({
     const box = containerRef.current;
     const target = activeLineRef.current;
 
+    // Optical centering at 40% from top for optimal reading flow
     const targetTop =
-      target.offsetTop - box.clientHeight / 2 + target.clientHeight / 2;
+      target.offsetTop - box.clientHeight * 0.4 + target.clientHeight / 2;
 
     if (reduce) {
-      box.scrollTop = targetTop;
+      box.scrollTop = Math.max(0, targetTop);
       return;
     }
 
     if (scrollAnimRef.current) scrollAnimRef.current.stop();
+    isProgrammaticScroll.current = true;
     scrollAnimRef.current = animate(box.scrollTop, Math.max(0, targetTop), {
-      duration: 1.1,
-      ease: [0.25, 1, 0.5, 1],
+      duration: 0.8,
+      ease: [0.22, 1, 0.36, 1],
       onUpdate: (v) => {
+        isProgrammaticScroll.current = true;
         box.scrollTop = v;
+      },
+      onComplete: () => {
+        requestAnimationFrame(() => {
+          isProgrammaticScroll.current = false;
+        });
       },
     });
 
@@ -102,23 +111,32 @@ export default function LyricsStudio({
   }, [activeLineIndex, userScrolled, reduce]);
 
   // Detect manual scroll
-  const handleScroll = () => {
+  const handleScroll = useCallback(() => {
+    if (isProgrammaticScroll.current) return;
     setUserScrolled(true);
     if (userScrollTimeoutRef.current) clearTimeout(userScrollTimeoutRef.current);
     userScrollTimeoutRef.current = setTimeout(() => {
-      // Keep paused until resume button clicked or after 6s of inactivity
       setUserScrolled(false);
-    }, 6000);
-  };
+    }, 3800);
+  }, []);
 
   const handleResumeScroll = () => {
+    if (userScrollTimeoutRef.current) clearTimeout(userScrollTimeoutRef.current);
     setUserScrolled(false);
   };
 
   const handleSeek = (time) => {
+    if (userScrollTimeoutRef.current) clearTimeout(userScrollTimeoutRef.current);
     player.seek(Math.max(0, time - offset));
     setUserScrolled(false);
   };
+
+  useEffect(() => {
+    return () => {
+      if (userScrollTimeoutRef.current) clearTimeout(userScrollTimeoutRef.current);
+      if (scrollAnimRef.current) scrollAnimRef.current.stop();
+    };
+  }, []);
 
   // Keyboard shortcut: F for Focus, Esc to exit
   useEffect(() => {
@@ -379,6 +397,16 @@ export default function LyricsStudio({
         className="studio-lyrics-viewport"
         ref={containerRef}
         onScroll={handleScroll}
+        onWheel={() => {
+          if (scrollAnimRef.current) scrollAnimRef.current.stop();
+          isProgrammaticScroll.current = false;
+          handleScroll();
+        }}
+        onTouchMove={() => {
+          if (scrollAnimRef.current) scrollAnimRef.current.stop();
+          isProgrammaticScroll.current = false;
+          handleScroll();
+        }}
       >
         {player.lyricsLoading ? (
           <div className="studio-loading-state" role="status" aria-live="polite">

@@ -122,8 +122,13 @@
 }
 * {
   box-sizing: border-box;
-  scrollbar-width: none;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(180, 140, 110, 0.28) transparent;
   -webkit-tap-highlight-color: transparent;
+}
+.dark-theme *,
+.swar-app.dark-theme * {
+  scrollbar-color: rgba(242, 138, 50, 0.25) transparent;
 }
 html,
 body {
@@ -186,12 +191,27 @@ svg {
   color: #2b1b11;
 }
 ::-webkit-scrollbar {
-  width: 0;
-  height: 0;
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(103, 85, 70, 0.2);
-  border-radius: 6px;
+  background: rgba(180, 140, 110, 0.28);
+  border-radius: 999px;
+  transition: background 0.2s ease;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(234, 88, 12, 0.65);
+}
+.dark-theme ::-webkit-scrollbar-thumb,
+.swar-app.dark-theme ::-webkit-scrollbar-thumb {
+  background: rgba(242, 138, 50, 0.25);
+}
+.dark-theme ::-webkit-scrollbar-thumb:hover,
+.swar-app.dark-theme ::-webkit-scrollbar-thumb:hover {
+  background: rgba(242, 138, 50, 0.65);
 }
 .swar-app,
 .swar-app {
@@ -308,12 +328,28 @@ svg {
   z-index: 30;
   overflow-y: auto;
   overflow-x: hidden;
-  scrollbar-width: none;
+  overscroll-behavior-y: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(242, 138, 50, 0.2) transparent;
   transition: width 0.35s cubic-bezier(0.2, 0, 0, 1), padding 0.35s cubic-bezier(0.2, 0, 0, 1);
   will-change: width;
 }
 .sidebar::-webkit-scrollbar {
-  display: none;
+  width: 4px;
+}
+.sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar::-webkit-scrollbar-thumb {
+  background: rgba(242, 138, 50, 0.2);
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+.sidebar:hover::-webkit-scrollbar-thumb {
+  background: rgba(242, 138, 50, 0.45);
+}
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background: rgba(242, 138, 50, 0.75);
 }
 
 /* Sidebar Brand Row */
@@ -983,6 +1019,9 @@ svg {
   gap: 14px;
   overflow-x: auto;
   padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  overscroll-behavior-x: contain;
 }
 .visual-mood-card {
   position: relative;
@@ -2254,14 +2293,30 @@ svg {
 }
 .lyrics-scroll {
   overflow-y: auto;
-  scrollbar-width: none;
+  overscroll-behavior-y: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(242, 138, 50, 0.22) transparent;
   position: relative;
   flex: 1;
   mask-image: linear-gradient(transparent, #000 15%, #000 85%, transparent);
   padding: 0 10px;
 }
 .lyrics-scroll::-webkit-scrollbar {
-  display: none;
+  width: 5px;
+}
+.lyrics-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.lyrics-scroll::-webkit-scrollbar-thumb {
+  background: rgba(242, 138, 50, 0.22);
+  border-radius: 999px;
+  transition: background 0.2s ease;
+}
+.lyrics-scroll:hover::-webkit-scrollbar-thumb {
+  background: rgba(242, 138, 50, 0.45);
+}
+.lyrics-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(242, 138, 50, 0.75);
 }
 .lyrics-spacer {
   height: 30%;
@@ -2856,6 +2911,9 @@ svg {
     margin: 0 calc(-1 * var(--space-6));
     padding: 0 var(--space-6) var(--space-2);
     scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+    overscroll-behavior-x: contain;
     scrollbar-width: none;
   }
   .album-card {
@@ -4693,6 +4751,9 @@ button {
   gap: 6px;
   margin: -14px 0 26px;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  overscroll-behavior-x: contain;
   scrollbar-width: none;
   max-width: 750px;
   padding: 2px;
@@ -4829,6 +4890,9 @@ button {
   display: flex;
   gap: 22px;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  overscroll-behavior-x: contain;
   scrollbar-width: none;
   padding-bottom: 6px;
 }
@@ -4974,6 +5038,8 @@ button {
   scroll-padding-right: 32px;
   scroll-snap-type: x proximity;
   -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  overscroll-behavior-x: contain;
   mask-image: linear-gradient(to right, #000 calc(100% - 44px), transparent 100%);
   -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 44px), transparent 100%);
 }
@@ -5471,7 +5537,30 @@ html.scroll-locked {
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
-  scrollbar-color: #ffffff26 transparent;
+  scrollbar-color: rgba(180, 140, 110, 0.28) transparent;
+}
+.swar-app.dark-theme .sheet {
+  scrollbar-color: rgba(242, 138, 50, 0.25) transparent;
+}
+.sheet::-webkit-scrollbar {
+  width: 6px;
+}
+.sheet::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sheet::-webkit-scrollbar-thumb {
+  background: rgba(180, 140, 110, 0.28);
+  border-radius: 999px;
+  transition: background 0.2s ease;
+}
+.sheet::-webkit-scrollbar-thumb:hover {
+  background: rgba(234, 88, 12, 0.65);
+}
+.swar-app.dark-theme .sheet::-webkit-scrollbar-thumb {
+  background: rgba(242, 138, 50, 0.25);
+}
+.swar-app.dark-theme .sheet::-webkit-scrollbar-thumb:hover {
+  background: rgba(242, 138, 50, 0.65);
 }
 @media (max-width: 760px) {
   /* The title row stays in reach while long sheets scroll beneath it. */
@@ -5951,6 +6040,8 @@ html.scroll-locked {
     padding-inline: calc(50vw - 50%);
     scroll-padding-inline: calc(50vw - 50%);
     overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
   }
   .mood-chips::-webkit-scrollbar {
     display: none;
@@ -7321,6 +7412,9 @@ html.lenis body {
   display: flex;
   gap: 8px;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  overscroll-behavior-x: contain;
   scrollbar-width: none;
 }
 
@@ -7364,9 +7458,28 @@ html.lenis body {
 .studio-lyrics-viewport {
   flex: 1;
   overflow-y: auto;
+  overscroll-behavior-y: contain;
   padding: 40px 32px 140px;
   position: relative;
-  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(242, 138, 50, 0.22) transparent;
+}
+.studio-lyrics-viewport::-webkit-scrollbar {
+  width: 5px;
+}
+.studio-lyrics-viewport::-webkit-scrollbar-track {
+  background: transparent;
+}
+.studio-lyrics-viewport::-webkit-scrollbar-thumb {
+  background: rgba(242, 138, 50, 0.22);
+  border-radius: 999px;
+  transition: background 0.2s ease;
+}
+.studio-lyrics-viewport:hover::-webkit-scrollbar-thumb {
+  background: rgba(242, 138, 50, 0.45);
+}
+.studio-lyrics-viewport::-webkit-scrollbar-thumb:hover {
+  background: rgba(242, 138, 50, 0.75);
 }
 
 .studio-lines-list {
@@ -8729,6 +8842,8 @@ html.lenis body {
   overflow-x: auto;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  overscroll-behavior-x: contain;
   flex-wrap: nowrap;
 }
 
@@ -8787,6 +8902,69 @@ html.lenis body {
   flex: 1;
   min-height: 0;
   position: relative;
+  overflow: hidden;
+}
+
+/* Unified Practice Studio Scrolling & Scrollbars */
+.studio-tab-body > div,
+.adaptive-coach-dashboard,
+.vocal-warmups-container,
+.vocal-range-container,
+.practice-journal-container,
+.practice-mode-container,
+.singalong-game-container {
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(242, 138, 50, 0.25) transparent;
+}
+.studio-tab-body > div::-webkit-scrollbar,
+.adaptive-coach-dashboard::-webkit-scrollbar,
+.vocal-warmups-container::-webkit-scrollbar,
+.vocal-range-container::-webkit-scrollbar,
+.practice-journal-container::-webkit-scrollbar,
+.practice-mode-container::-webkit-scrollbar,
+.singalong-game-container::-webkit-scrollbar {
+  width: 6px;
+}
+.studio-tab-body > div::-webkit-scrollbar-track,
+.adaptive-coach-dashboard::-webkit-scrollbar-track,
+.vocal-warmups-container::-webkit-scrollbar-track,
+.vocal-range-container::-webkit-scrollbar-track,
+.practice-journal-container::-webkit-scrollbar-track,
+.practice-mode-container::-webkit-scrollbar-track,
+.singalong-game-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+.studio-tab-body > div::-webkit-scrollbar-thumb,
+.adaptive-coach-dashboard::-webkit-scrollbar-thumb,
+.vocal-warmups-container::-webkit-scrollbar-thumb,
+.vocal-range-container::-webkit-scrollbar-thumb,
+.practice-journal-container::-webkit-scrollbar-thumb,
+.practice-mode-container::-webkit-scrollbar-thumb,
+.singalong-game-container::-webkit-scrollbar-thumb {
+  background: rgba(242, 138, 50, 0.25);
+  border-radius: 999px;
+  transition: background 0.2s ease;
+}
+.studio-tab-body > div:hover::-webkit-scrollbar-thumb,
+.adaptive-coach-dashboard:hover::-webkit-scrollbar-thumb,
+.vocal-warmups-container:hover::-webkit-scrollbar-thumb,
+.vocal-range-container:hover::-webkit-scrollbar-thumb,
+.practice-journal-container:hover::-webkit-scrollbar-thumb,
+.practice-mode-container:hover::-webkit-scrollbar-thumb,
+.singalong-game-container:hover::-webkit-scrollbar-thumb {
+  background: rgba(242, 138, 50, 0.45);
+}
+.studio-tab-body > div::-webkit-scrollbar-thumb:hover,
+.adaptive-coach-dashboard::-webkit-scrollbar-thumb:hover,
+.vocal-warmups-container::-webkit-scrollbar-thumb:hover,
+.vocal-range-container::-webkit-scrollbar-thumb:hover,
+.practice-journal-container::-webkit-scrollbar-thumb:hover,
+.practice-mode-container::-webkit-scrollbar-thumb:hover,
+.singalong-game-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(242, 138, 50, 0.75);
 }
 
 /* ==========================================================================

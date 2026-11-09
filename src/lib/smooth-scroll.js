@@ -20,7 +20,7 @@ export function startSmoothScroll() {
       wheelMultiplier: 0.95,
       smoothWheel: true,
       syncTouch: false,
-      prevent: node => !!node.closest?.('dialog, .sheet, .desktop-lyrics, [data-lenis-prevent]'),
+      prevent: node => !!node.closest?.('dialog, .sheet, .sidebar, .lyrics-scroll, .studio-lyrics-viewport, .queue-modal, .practice-mode-container, .adaptive-coach-dashboard, .vocal-warmups-container, .vocal-range-container, .practice-journal-container, .singalong-game-container, [data-lenis-prevent]'),
     });
   }).catch(() => { /* Native scrolling stays. */ }).finally(() => { loading = null; });
 }
@@ -29,4 +29,20 @@ export function startSmoothScroll() {
 export function jumpTo(top) {
   if (lenis) lenis.scrollTo(top, { immediate: true, force: true });
   else window.scrollTo({ top, behavior: 'instant' });
+}
+
+// Smoothly scrolls to target offset respecting prefers-reduced-motion
+export function smoothScrollTo(top, { duration = 0.8, onComplete } = {}) {
+  const prefersReduced = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+  if (prefersReduced) {
+    jumpTo(top);
+    onComplete?.();
+    return;
+  }
+  if (lenis) {
+    lenis.scrollTo(top, { duration, onComplete });
+  } else if (typeof window !== 'undefined') {
+    window.scrollTo({ top, behavior: 'smooth' });
+    if (onComplete) setTimeout(onComplete, Math.round(duration * 1000));
+  }
 }
