@@ -92,9 +92,9 @@ export default function Welcome({ onLeave }) {
             ref={image}
             src="/icon_new_2.png"
             alt="Swar"
-            width="360"
-            height="120"
-            style={{ maxHeight: "96px", width: "auto", objectFit: "contain", filter: "drop-shadow(0 0 24px rgba(234, 88, 12, 0.45))" }}
+            width="520"
+            height="173"
+            className="welcome-logo-img"
             onError={() => {
               setVisible(false);
             }}

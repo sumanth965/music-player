@@ -228,18 +228,18 @@ svg {
 }
 .brand-icon-mark {
   display: none;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   object-fit: contain;
-  filter: drop-shadow(0 0 8px rgba(242, 138, 50, 0.45));
+  filter: drop-shadow(0 0 10px rgba(242, 138, 50, 0.5));
 }
 .brand-full-logo {
   display: block;
-  height: 32px;
+  height: 36px;
   width: auto;
-  max-width: 140px;
+  max-width: 155px;
   object-fit: contain;
-  filter: drop-shadow(0 0 10px rgba(242, 138, 50, 0.35));
+  filter: drop-shadow(0 0 12px rgba(242, 138, 50, 0.4));
   transition: transform 0.2s ease, filter 0.2s ease;
 }
 .brand:hover .brand-full-logo {
@@ -5061,11 +5061,20 @@ button {
   background: radial-gradient(circle at 50% 50%, #150f0a 0%, #0c0806 100%);
   overflow: hidden;
 }
-.swar-welcome img {
+.swar-welcome img,
+.welcome-logo-img {
   position: relative;
-  width: min(78vw, 420px);
+  width: min(85vw, 540px);
+  max-width: 540px;
   height: auto;
-  filter: drop-shadow(0 12px 32px rgba(234, 114, 46, 0.18));
+  object-fit: contain;
+  filter: drop-shadow(0 0 35px rgba(234, 88, 12, 0.55)) drop-shadow(0 14px 45px rgba(0, 0, 0, 0.8));
+}
+@media (max-width: 760px) {
+  .swar-welcome img,
+  .welcome-logo-img {
+    width: min(88vw, 360px);
+  }
 }
 .welcome-glow {
   position: absolute;
