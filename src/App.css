@@ -2589,17 +2589,21 @@ svg {
   align-items: center;
   gap: 18px;
   padding: 24px 0;
-  color: #d8e5db;
+  color: #5c4738;
   font-size: var(--text-xs);
   line-height: 1.6;
 }
+.settings-note p {
+  color: #5c4738;
+  margin: 0;
+}
 .settings-note svg {
-  color: #f79d5c;
+  color: #ea580c;
   flex-shrink: 0;
 }
 .provider-note {
   font-size: var(--text-2xs);
-  color: #b5c7ba;
+  color: #7a685b;
   line-height: 1.6;
 }
 .toast {
@@ -3608,11 +3612,12 @@ svg {
   letter-spacing: -0.8px;
   max-width: 280px;
   line-height: 1.18;
+  color: #2b1b11;
 }
 .dj-intro p {
   font-size: 12px;
   line-height: 1.7;
-  color: #b8c3bb;
+  color: #7a685b;
   margin-top: 12px;
   max-width: 340px;
 }
@@ -3734,7 +3739,7 @@ svg {
 }
 .queue-status {
   font-size: 12px;
-  color: #bac6bd;
+  color: #7a685b;
   padding: 12px 0;
 }
 .recommendation-reason {
@@ -4707,13 +4712,13 @@ button {
   gap: 10px 16px;
   padding: 20px 0 4px;
   font-size: 11.5px;
-  color: #d1ded3;
+  color: #5c4738;
 }
 .shortcut-list span {
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #d1ded3;
+  color: #5c4738;
 }
 .shortcut-list kbd {
   margin: 0;
@@ -4721,9 +4726,9 @@ button {
   min-width: 34px;
   padding: 4px 7px;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  color: #fca76c;
+  background: rgba(139, 69, 19, 0.08);
+  border: 1px solid rgba(139, 69, 19, 0.18);
+  color: #c2410c;
   text-align: center;
   font: 600 10.5px system-ui;
 }
@@ -5250,22 +5255,25 @@ button {
   grid-template-columns: 110px 1fr;
   gap: 14px;
   padding: 12px 0;
-  border-bottom: 1px solid #ffffff0b;
-  font-size: 12px;
+  border-bottom: 1px solid rgba(139, 69, 19, 0.1);
+  font-size: 12.5px;
 }
 .audio-facts dt {
-  color: #9eaaa1;
+  color: #7a685b;
+  font-weight: 500;
 }
 .audio-facts dd {
   margin: 0;
-  color: #eef3ef;
+  color: #2b1b11;
+  font-weight: 600;
 }
 .segmented {
   display: flex;
   gap: 2px;
   padding: 3px;
   border-radius: 14px;
-  background: #0003;
+  background: rgba(139, 69, 19, 0.08);
+  border: 1px solid rgba(139, 69, 19, 0.12);
   flex-shrink: 0;
 }
 .segmented button {
@@ -5276,24 +5284,28 @@ button {
   border-radius: 11px;
   font-size: 11px;
   font-weight: 650;
-  color: #c9d6cc;
+  color: #5c4738;
   display: flex;
   flex-direction: column;
   align-items: center;
   line-height: 1.2;
+  transition: color 0.15s ease;
+}
+.segmented button:hover {
+  color: #2b1b11;
 }
 .segmented button small {
   font-size: 9px;
-  opacity: 0.85;
+  opacity: 0.9;
   font-weight: 500;
-  color: #b0c0b4;
+  color: #8c786a;
 }
 .segmented button.selected {
   color: #ffffff;
   font-weight: 700;
 }
 .segmented button.selected small {
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(255, 255, 255, 0.95);
 }
 .segmented .nav-pill {
   background: var(--accent);
@@ -10979,6 +10991,35 @@ html.lenis body {
 
 .swar-app.dark-theme .provider-note {
   color: #a89788 !important;
+}
+
+.swar-app.dark-theme .audio-facts div {
+  border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.swar-app.dark-theme .audio-facts dt {
+  color: #a89788 !important;
+}
+
+.swar-app.dark-theme .audio-facts dd {
+  color: #faf6f0 !important;
+}
+
+.swar-app.dark-theme .dj-intro h3 {
+  color: #faf6f0 !important;
+}
+
+.swar-app.dark-theme .dj-intro p {
+  color: #d1c2b4 !important;
+}
+
+.swar-app.dark-theme .queue-status {
+  color: #d1c2b4 !important;
+}
+
+.swar-app.dark-theme .segmented {
+  background: rgba(0, 0, 0, 0.45) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
 }
 
 .swar-app.dark-theme .segmented button {
